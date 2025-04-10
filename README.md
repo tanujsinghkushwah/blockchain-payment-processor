@@ -1,24 +1,19 @@
-# Blockchain Payment System
+# Blockchain Payment Processor
 
-A modular blockchain payment system for accepting USDT on BEP20 and Polygon networks, designed for integration with Electron desktop applications.
+Easily accept USDT cryptocurrency payments on popular blockchain networks within your applications.
 
-## Features
+## Overview
 
-- Accept USDT payments on BEP20 (Binance Smart Chain) and Polygon networks
-- Generate unique payment addresses with countdown timers
-- Real-time blockchain monitoring for transaction detection
-- Payment verification with configurable confirmation requirements
-- RESTful API for easy integration
-- Comprehensive documentation and examples
+This system allows you to integrate USDT payments (on BEP20/Binance Smart Chain and Polygon networks, including testnets) directly into your projects, especially desktop applications built with Electron.
 
-## Architecture
+## Key Features
 
-The system consists of several modular components:
-
-1. **Blockchain Listeners**: Monitor the BEP20 and Polygon networks for incoming USDT transactions
-2. **Payment Processing Module**: Handles payment sessions, address generation, and payment status tracking
-3. **Payment Verification System**: Ensures transactions are properly validated and confirmed on the blockchain
-4. **API Layer**: Provides RESTful endpoints for integration with your application
+*   **Accept USDT:** Handle payments on BEP20 and Polygon (Mainnet & Testnet).
+*   **Unique Payment Addresses:** Generate a distinct address for each payment request.
+*   **Payment Timers:** Set countdowns for payment completion.
+*   **Real-time Monitoring:** Automatically detects incoming transactions on the blockchain.
+*   **Configurable Verification:** Set the number of block confirmations required to validate a payment.
+*   **Simple REST API:** Integrate the payment system easily using standard web requests.
 
 ## Installation
 
@@ -28,10 +23,12 @@ npm install blockchain-payment-system
 
 ## Quick Start
 
+Here's the fastest way to get the system running:
+
 ```javascript
 const { startCompleteSystem } = require('blockchain-payment-system/src/verification/integration');
 
-// Start the payment system
+// Start the system with default settings
 startCompleteSystem()
   .then(({ server }) => {
     console.log(`Payment system running on port ${server.address().port}`);
@@ -41,59 +38,46 @@ startCompleteSystem()
   });
 ```
 
-## Running the System
+## Choosing Active Networks
 
-The application uses the `ACTIVE_NETWORKS` environment variable to determine which blockchain listeners to activate upon startup. You can set this variable before running `npm start` to specify one or more networks, separated by commas.
+By default, the system might try to connect to multiple networks. You can specify exactly which networks to monitor using the `ACTIVE_NETWORKS` environment variable before starting.
 
-**Note:** Ensure the corresponding network configurations (RPC URLs, recipient addresses, API keys) are correctly set in your `.env` file for any network you activate.
+**Important:** Make sure you have added the necessary API keys and configuration details in your `.env` file for any network you activate.
 
-**Examples (using PowerShell):**
+**How to set `ACTIVE_NETWORKS` (Example using PowerShell):**
 
-*   **Run with BEP20 (BNB Chain Mainnet) Listener:**
-    ```powershell
-    $env:ACTIVE_NETWORKS='BEP20'; npm start
-    ```
-
-*   **Run with Polygon Mainnet Listener:**
-    ```powershell
-    $env:ACTIVE_NETWORKS='POLYGON'; npm start
-    ```
-
-*   **Run with BEP20 Testnet Listener:**
+*   **Run only BEP20 Testnet:**
     ```powershell
     $env:ACTIVE_NETWORKS='BEP20_TESTNET'; npm start
     ```
 
-*   **Run with Polygon Amoy Testnet Listener:**
-    ```powershell
-    $env:ACTIVE_NETWORKS='POLYGON_AMOY'; npm start
-    ```
-
-*   **Run with both BEP20 and Polygon Mainnet Listeners:**
+*   **Run BEP20 Mainnet and Polygon Mainnet:**
     ```powershell
     $env:ACTIVE_NETWORKS='BEP20,POLYGON'; npm start
     ```
 
-*   **Run without any active listeners (API server only):**
-    *(Leave `ACTIVE_NETWORKS` unset or empty)*
+*   **Run only the API (no blockchain listeners):**
     ```powershell
-    npm start 
+    npm start
     ```
-    *(You will see a warning message in the console)*
+    *(You'll see a warning if no networks are active).*
 
-## Documentation
-
-- [Setup Instructions](./docs/setup_instructions.md)
-- [Quick Start Guide](./docs/integration/quick_start.md)
-- [Integration Guide](./docs/integration/integration_guide.md)
-- [API Documentation](./docs/integration/api_documentation.md)
+**Available Network IDs:** `BEP20`, `POLYGON`, `BEP20_TESTNET`, `POLYGON_AMOY`.
 
 ## Requirements
 
-- Node.js (v14 or higher)
-- API keys for blockchain explorers:
-  - BSCScan API key for BEP20 network
-  - PolygonScan API key for Polygon network
+*   Node.js (v14 or higher recommended)
+*   API Keys (Get these from the respective blockchain explorers):
+    *   BSCScan API key (for BEP20/BEP20_TESTNET)
+    *   PolygonScan API key (for POLYGON/POLYGON_AMOY)
+
+## Detailed Documentation
+
+For more in-depth information, explore the `/docs` folder:
+
+*   [Setup Instructions](./docs/setup_instructions.md)
+*   [Integration Guide](./docs/integration/integration_guide.md)
+*   [API Documentation](./docs/integration/api_documentation.md)
 
 ## License
 
