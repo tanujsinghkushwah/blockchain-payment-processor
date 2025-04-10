@@ -1,0 +1,31 @@
+{
+  "name": "blockchain-payment-system",
+  "version": "1.0.0",
+  "description": "A modular blockchain payment system for accepting USDT on BEP20 and Polygon networks",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/verification/integration.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "blockchain",
+    "payment",
+    "cryptocurrency",
+    "USDT",
+    "BEP20",
+    "Polygon"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.1",
+    "ethers": "^6.13.5",
+    "express": "^4.18.1",
+    "express-rate-limit": "^6.4.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
