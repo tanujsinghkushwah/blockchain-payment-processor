@@ -19,15 +19,24 @@ const mockConfig = {
 /**
  * Initialize and start the API server
  */
-async function initializeApiServer() {
+async function initializeApiServer(networksToStart = []) {
   try {
     // Create the listener manager
     const listenerManager = new ListenerManager(mockDb);
     
-    // Initialize blockchain listeners - ONLY TESTNET FOR NOW
-    await listenerManager.initialize('BEP20_TESTNET');
-    // Start the specific listener
-    await listenerManager.start('BEP20_TESTNET'); 
+    // Initialize and start ONLY the specified blockchain listeners
+    if (networksToStart && networksToStart.length > 0) {
+      console.log(`Initializing listeners for specified networks: ${networksToStart.join(', ')}`);
+      // Initialize only the requested listeners
+      await listenerManager.initialize(networksToStart); // Pass array to initialize
+      // Start only the requested listeners
+      await listenerManager.start(networksToStart); // Pass array to start
+    } else {
+      console.warn('No networks specified to start via command line. No listeners will be active.');
+      // Optionally, initialize/start defaults if needed when none are specified
+      // await listenerManager.initialize(['DEFAULT_NETWORK']); 
+      // await listenerManager.start(['DEFAULT_NETWORK']); 
+    }
     
     // Create the payment session manager
     const sessionManager = new PaymentSessionManager(mockDb, mockConfig);

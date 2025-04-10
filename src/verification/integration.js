@@ -7,15 +7,25 @@ require('dotenv').config(); // Load .env variables AT THE VERY START
 const { startBlockchainPaymentSystem } = require('../index');
 const { PaymentVerificationSystem } = require('./index');
 
+// --- Environment Variable Parsing ---
+function getActiveNetworksFromEnv() {
+  const networksEnv = process.env.ACTIVE_NETWORKS || '';
+  console.log(`DEBUG: Read ACTIVE_NETWORKS from env: "${networksEnv}"`); // Debug log
+  const networks = networksEnv.split(',').map(n => n.trim()).filter(n => n); // Split, trim, remove empty strings
+  console.log('DEBUG: Parsed active networks from env:', networks); // Debug log
+  return networks;
+}
+// --- End Environment Variable Parsing ---
+
 /**
  * Initialize and start the complete blockchain payment system with verification
  */
-async function startCompleteSystem() {
+async function startCompleteSystem(networksToStart) { // Accept networks argument
   try {
-    console.log('Starting complete blockchain payment system with verification...');
+    console.log(`Starting complete blockchain payment system. Networks: ${networksToStart.length > 0 ? networksToStart.join(', ') : 'None Specified'}...`);
     
-    // Start the blockchain payment system (which initializes the payment processor and blockchain listeners)
-    const { paymentProcessor, listenerManager, server } = await startBlockchainPaymentSystem();
+    // Pass networks to the underlying system start function
+    const { paymentProcessor, listenerManager, server } = await startBlockchainPaymentSystem(networksToStart);
     
     // Create and configure the payment verification system
     const verificationConfig = {
@@ -75,7 +85,15 @@ async function startCompleteSystem() {
 
 // If this file is run directly, start the system
 if (require.main === module) {
-  startCompleteSystem()
+  const networksToStart = getActiveNetworksFromEnv(); // Get networks from ENV variable
+
+  if (networksToStart.length === 0) {
+    console.warn('No ACTIVE_NETWORKS environment variable set or it is empty. No listeners will be started. Set e.g., ACTIVE_NETWORKS=BEP20_TESTNET,POLYGON');
+    // Decide if you want to proceed without listeners or exit
+    // For now, we proceed, but API might be limited
+  }
+
+  startCompleteSystem(networksToStart) // Pass parsed networks
     .then(() => {
       console.log('Complete blockchain payment system is ready to accept and verify payments');
     })

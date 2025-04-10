@@ -2,6 +2,8 @@
  * Base class for blockchain listeners
  * This abstract class defines the common interface and functionality for all blockchain listeners
  */
+const { ethers } = require('ethers'); // Ensure ethers is required for parsing units
+
 class BaseBlockchainListener {
   /**
    * Constructor for the base blockchain listener
@@ -125,19 +127,52 @@ class BaseBlockchainListener {
   }
 
   /**
-   * Process a transaction
-   * @param {Object} transaction - The transaction to process
+   * Process a detected transaction
+   * @param {Object} transaction - The transaction object from the event log
    * @returns {Promise<void>}
    */
   async processTransaction(transaction) {
     try {
-      // Check if this transaction is for one of our payment addresses
+      // Find the corresponding payment address (could be the main recipient address)
       const paymentAddress = await this.findPaymentAddressByAddress(transaction.to);
-      
       if (!paymentAddress) {
-        // Not our address, ignore
-        return;
+        console.log(`[${this.config.name}] Ignoring transaction ${transaction.hash} - recipient address ${transaction.to} not tracked.`);
+        return; // Ignore transactions to addresses we don't track
       }
+
+      // --- Amount Verification Logic --- 
+      if (this.config.targetAmount) {
+        try {
+          const targetAmountString = this.config.targetAmount;
+          const decimals = this.config.tokenDecimals;
+          // Convert target amount (e.g., "10.50") to smallest unit (BigInt)
+          const targetAmountSmallestUnit = ethers.parseUnits(targetAmountString, decimals);
+          
+          // Calculate the lower bound (target - 5%)
+          const fivePercent = (targetAmountSmallestUnit * 5n) / 100n;
+          const lowerBound = targetAmountSmallestUnit - fivePercent;
+          
+          const receivedAmountSmallestUnit = BigInt(transaction.value);
+
+          console.log(`[${this.config.name}] Verifying amount for tx ${transaction.hash}: Received ${receivedAmountSmallestUnit}, Target ${targetAmountSmallestUnit}, Lower Bound (-5%) ${lowerBound}`);
+          
+          // Check if received amount is >= lower bound
+          if (receivedAmountSmallestUnit < lowerBound) {
+            console.log(`[${this.config.name}] Ignoring transaction ${transaction.hash} - received amount ${receivedAmountSmallestUnit} is less than the allowed lower bound ${lowerBound}.`);
+            return; // Ignore transaction if amount is too low
+          }
+
+          console.log(`[${this.config.name}] Transaction ${transaction.hash} amount ${receivedAmountSmallestUnit} meets criteria (>= ${lowerBound}).`);
+
+        } catch (parseError) {
+          console.error(`[${this.config.name}] Error parsing target amount "${this.config.targetAmount}" or received amount "${transaction.value}". Skipping amount check. Error:`, parseError);
+          // Decide how to handle parsing errors - skip check or reject transaction? 
+          // For now, we log and continue processing, effectively ignoring the amount check on error.
+        }
+      } else {
+          console.log(`[${this.config.name}] No targetAmount configured for this network. Skipping amount check.`);
+      }
+      // --- End Amount Verification Logic ---
 
       // Check if we've already processed this transaction
       const existingTx = await this.findTransactionByHash(transaction.hash);

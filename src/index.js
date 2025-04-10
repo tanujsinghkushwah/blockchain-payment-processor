@@ -9,12 +9,12 @@ const ListenerManager = require('./listeners/ListenerManager');
 /**
  * Initialize and start the blockchain payment system
  */
-async function startBlockchainPaymentSystem() {
+async function startBlockchainPaymentSystem(networksToStart = []) {
   try {
     console.log('Starting blockchain payment system...');
     
     // Initialize the API server (which also initializes the payment processor and blockchain listeners)
-    const { app, server, paymentProcessor, listenerManager } = await initializeApiServer();
+    const { app, server, paymentProcessor, listenerManager } = await initializeApiServer(networksToStart);
     
     // --- DEBUG LOG --- Check server object
     console.log('DEBUG: Received server object:', server);

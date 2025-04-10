@@ -36,25 +36,35 @@ class ListenerManager {
   }
 
   /**
-   * Initialize a specific network listener
-   * @param {string} networkType - The network type (BEP20 or POLYGON)
+   * Initialize one or more specific network listeners
+   * @param {string|string[]} networkTypes - The network type or array of network types (e.g., 'BEP20' or ['BEP20', 'POLYGON'])
    * @returns {Promise<void>}
    */
-  async initialize(networkType) {
-    try {
-      if (this.listeners[networkType]) {
-        console.log(`Listener for ${networkType} already initialized`);
-        return;
+  async initialize(networkTypes) {
+    const typesToInitialize = Array.isArray(networkTypes) ? networkTypes : [networkTypes];
+    
+    for (const networkType of typesToInitialize) {
+      try {
+        if (this.listeners[networkType]) {
+          console.log(`Listener for ${networkType} already initialized`);
+          continue; // Skip if already initialized
+        }
+        
+        // Validate if the network type is supported (optional but good practice)
+        // if (!supportedNetworks.includes(networkType)) { // Assuming supportedNetworks is available
+        //   console.warn(`Network type ${networkType} is not supported in config. Skipping.`);
+        //   continue;
+        // }
+
+        const listener = createListener(networkType, this.db, this.eventEmitter);
+        await listener.initialize();
+        
+        this.listeners[networkType] = listener;
+        console.log(`Listener for ${networkType} initialized`);
+      } catch (error) {
+        console.error(`Failed to initialize ${networkType} listener:`, error);
+        // Decide if one failure should stop all: throw error; or just log and continue
       }
-      
-      const listener = createListener(networkType, this.db, this.eventEmitter);
-      await listener.initialize();
-      
-      this.listeners[networkType] = listener;
-      console.log(`Listener for ${networkType} initialized`);
-    } catch (error) {
-      console.error(`Failed to initialize ${networkType} listener:`, error);
-      throw error;
     }
   }
 
@@ -74,24 +84,38 @@ class ListenerManager {
   }
 
   /**
-   * Start a specific network listener
-   * @param {string} networkType - The network type (BEP20 or POLYGON)
+   * Start one or more specific network listeners
+   * @param {string|string[]} networkTypes - The network type or array of network types
    * @returns {Promise<void>}
    */
-  async start(networkType) {
-    try {
-      const listener = this.listeners[networkType];
-      
-      if (!listener) {
-        throw new Error(`Listener for ${networkType} not initialized`);
+  async start(networkTypes) {
+    const typesToStart = Array.isArray(networkTypes) ? networkTypes : [networkTypes];
+    const promises = [];
+
+    for (const networkType of typesToStart) {
+      try {
+        const listener = this.listeners[networkType];
+        
+        if (!listener) {
+          console.warn(`Listener for ${networkType} not initialized, cannot start. Skipping.`);
+          continue;
+          // Alternatively: throw new Error(`Listener for ${networkType} not initialized`);
+        }
+
+        if (listener.isRunning) {
+           console.log(`Listener for ${networkType} is already running.`);
+           continue;
+        }
+        
+        promises.push(listener.start().then(() => console.log(`Listener for ${networkType} started`)));
+      } catch (error) {
+        console.error(`Failed to start ${networkType} listener:`, error);
+        // Decide if one failure should stop all: throw error; or just log and continue
       }
-      
-      await listener.start();
-      console.log(`Listener for ${networkType} started`);
-    } catch (error) {
-      console.error(`Failed to start ${networkType} listener:`, error);
-      throw error;
     }
+
+    // Wait for all start promises to resolve (or reject)
+    await Promise.all(promises);
   }
 
   /**

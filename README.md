@@ -41,6 +41,46 @@ startCompleteSystem()
   });
 ```
 
+## Running the System
+
+The application uses the `ACTIVE_NETWORKS` environment variable to determine which blockchain listeners to activate upon startup. You can set this variable before running `npm start` to specify one or more networks, separated by commas.
+
+**Note:** Ensure the corresponding network configurations (RPC URLs, recipient addresses, API keys) are correctly set in your `.env` file for any network you activate.
+
+**Examples (using PowerShell):**
+
+*   **Run with BEP20 (BNB Chain Mainnet) Listener:**
+    ```powershell
+    $env:ACTIVE_NETWORKS='BEP20'; npm start
+    ```
+
+*   **Run with Polygon Mainnet Listener:**
+    ```powershell
+    $env:ACTIVE_NETWORKS='POLYGON'; npm start
+    ```
+
+*   **Run with BEP20 Testnet Listener:**
+    ```powershell
+    $env:ACTIVE_NETWORKS='BEP20_TESTNET'; npm start
+    ```
+
+*   **Run with Polygon Amoy Testnet Listener:**
+    ```powershell
+    $env:ACTIVE_NETWORKS='POLYGON_AMOY'; npm start
+    ```
+
+*   **Run with both BEP20 and Polygon Mainnet Listeners:**
+    ```powershell
+    $env:ACTIVE_NETWORKS='BEP20,POLYGON'; npm start
+    ```
+
+*   **Run without any active listeners (API server only):**
+    *(Leave `ACTIVE_NETWORKS` unset or empty)*
+    ```powershell
+    npm start 
+    ```
+    *(You will see a warning message in the console)*
+
 ## Documentation
 
 - [Setup Instructions](./docs/setup_instructions.md)
