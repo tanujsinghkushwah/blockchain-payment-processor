@@ -1,810 +1,325 @@
-# Blockchain Payment System Integration Guide
+# Blockchain Payment Processor Integration Guide
 
 ## Introduction
 
-This document provides comprehensive instructions for integrating the Blockchain Payment System into your Electron desktop application. The system is designed to accept USDT payments on both BEP20 (Binance Smart Chain) and Polygon networks, with a modular architecture that makes integration straightforward.
+This document provides comprehensive instructions for integrating the Blockchain Payment Processor into your applications, particularly those built with Electron. The system is designed to accept USDT payments on BEP20 (Binance Smart Chain) and Polygon networks (including their testnets), featuring a modular architecture for straightforward integration.
 
 ## System Overview
 
-The Blockchain Payment System consists of several key components:
+The Blockchain Payment Processor consists of several key components:
 
-1. **Blockchain Listeners**: Monitor the BEP20 and Polygon networks for incoming USDT transactions.
-2. **Payment Processing Module**: Handles payment sessions, address generation, and payment status tracking.
-3. **Payment Verification System**: Ensures transactions are properly validated and confirmed on the blockchain.
-4. **API Layer**: Provides RESTful endpoints for integration with your application.
+1. **Blockchain Listeners**: Monitor specified networks (e.g., `BEP20`, `POLYGON`, `BEP20_TESTNET`, `POLYGON_AMOY`) for incoming USDT transactions to designated addresses.
+2. **Payment Processing Module**: Manages payment sessions, unique address generation, and tracks payment status.
+3. **Payment Verification System**: Ensures transactions are validated and confirmed on the blockchain based on configured confirmation counts.
+4. **API Layer**: Provides RESTful endpoints for interaction with your application.
 
-The system follows a flow similar to Bitrefill's payment process:
-- User selects a cryptocurrency network (BEP20 or Polygon)
-- System generates a unique payment address with a countdown timer
-- System continuously polls the blockchain to detect and verify payments
-- Once payment is confirmed, the system updates the payment status
+The typical flow involves:
+* Your application requests a new payment session via the API for a specific network (e.g., `BEP20_TESTNET`).
+* The processor generates a unique payment address and returns it with a countdown timer.
+* If the corresponding network listener is active (via `ACTIVE_NETWORKS`), it monitors the blockchain for payments to that address.
+* Once a payment is detected and sufficiently confirmed, the system updates the payment session status.
+* Your application polls the API to check the session status and confirms the payment to the user.
 
 ## Prerequisites
 
-Before integrating the Blockchain Payment System, ensure you have:
+Before integrating, ensure you have:
 
-1. Node.js (v14 or higher) installed in your environment
-2. API keys for blockchain explorers:
-   - BSCScan API key for BEP20 network
-   - PolygonScan API key for Polygon network
-3. Basic understanding of RESTful APIs and JavaScript/Node.js
+1. Node.js (v14 or higher recommended) installed.
+2. Completed the setup described in `docs/setup_instructions.md`, including creating and configuring your `.env` file with necessary API keys, recipient addresses, and RPC URLs.
+3. Basic understanding of RESTful APIs and JavaScript/Node.js.
 
 ## Installation
 
-### Option 1: NPM Package
+If you haven't already, install the package in your project:
 
 ```bash
 npm install blockchain-payment-system
 ```
 
-### Option 2: Manual Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/blockchain-payment-system.git
-```
-
-2. Install dependencies:
-```bash
-cd blockchain-payment-system
-npm install
-```
-
 ## Configuration
 
-Create a configuration file (e.g., `payment-config.js`) in your application:
+All configuration is handled via environment variables, loaded from the `.env` file in the processor's root directory, as detailed in the [Setup Instructions](./setup_instructions.md).
 
-```javascript
-module.exports = {
-  // API configuration
-  api: {
-    baseUrl: 'http://localhost:3000/api/v1',
-    apiKey: 'your_api_key_here'
-  },
-  
-  // Network configuration
-  networks: {
-    BEP20: {
-      explorerApiKey: 'your_bscscan_api_key',
-      requiredConfirmations: 10
-    },
-    POLYGON: {
-      explorerApiKey: 'your_polygonscan_api_key',
-      requiredConfirmations: 15
-    }
-  },
-  
-  // Payment configuration
-  payment: {
-    expirationMinutes: 30,
-    pollingInterval: 10000 // 10 seconds
-  }
-};
+**Key variables needed by your integrating application:**
+
+* `API_BASE_URL`: The full URL where the processor's API is running (e.g., `http://localhost:3000/api/v1`). You might need to construct this from `HOST` and `PORT` if running locally.
+* `API_KEY`: The secret key you defined in the `.env` file for authenticating API requests.
+
+It's recommended to load these into your application's environment as well (e.g., using a `.env` file in your app's root or Electron's environment handling).
+
+## Starting the Payment Processor
+
+How you start the processor depends on your deployment strategy.
+
+### Option 1: Run as a Separate Service
+
+Navigate to the `blockchain-payment-system` directory and run:
+
+```powershell
+# Example: Run with BEP20 Mainnet and Testnet listeners
+$env:ACTIVE_NETWORKS='BEP20,BEP20_TESTNET'; npm start
 ```
 
-## Starting the Payment Server
+Your application then communicates with the processor via its API endpoints.
 
-### Option 1: As a Standalone Service
+### Option 2: Embedded within Your Electron App
 
-```javascript
-const { startCompleteSystem } = require('blockchain-payment-system/src/verification/integration');
-
-// Start the payment system
-startCompleteSystem()
-  .then(({ server }) => {
-    console.log(`Payment system running on port ${server.address().port}`);
-  })
-  .catch(error => {
-    console.error('Failed to start payment system:', error);
-  });
-```
-
-### Option 2: Embedded in Your Electron App
+You can start the processor programmatically within your Electron main process.
 
 ```javascript
+// In your Electron main process (e.g., main.js)
 const { app, BrowserWindow } = require('electron');
-const { startCompleteSystem } = require('blockchain-payment-system/src/verification/integration');
+const path = require('path');
+
+// Check if running in dev mode, adjust path accordingly
+const isDev = process.env.NODE_ENV !== 'production';
+const processorPath = isDev
+  ? path.resolve(__dirname, '../node_modules/blockchain-payment-system') // Adjust path if needed
+  : path.resolve(process.resourcesPath, 'app.asar.unpacked/node_modules/blockchain-payment-system'); // Example for packaged app
+
+// Set environment variables programmatically BEFORE requiring the processor
+// This is crucial for embedded mode
+process.env.ACTIVE_NETWORKS = 'BEP20,POLYGON,BEP20_TESTNET,POLYGON_AMOY'; // Activate desired networks
+// Load other .env variables if needed (e.g., using dotenv)
+// require('dotenv').config({ path: path.resolve(processorPath, '.env') }); // If .env is alongside the processor
+
+const { startCompleteSystem } = require(path.join(processorPath, 'src/verification/integration'));
 
 let mainWindow;
 let paymentSystem;
 
-async function createWindow() {
-  // Start the payment system
+async function startProcessorAndApp() {
   try {
+    // Start the payment processor
     paymentSystem = await startCompleteSystem();
-    console.log(`Payment system running on port ${paymentSystem.server.address().port}`);
+    console.log(`Payment processor API running on port ${paymentSystem.server.address().port}`);
+    // Store the base URL for the renderer process
+    process.env.API_BASE_URL = `http://localhost:${paymentSystem.server.address().port}/api/v1`;
+    // Ensure API_KEY is also available (likely loaded from .env)
   } catch (error) {
-    console.error('Failed to start payment system:', error);
+    console.error('Failed to start payment processor:', error);
+    // Handle error appropriately - maybe quit the app or show an error message
+    app.quit();
+    return;
   }
-  
+
   // Create the browser window
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      preload: path.join(__dirname, 'preload.js'), // Use preload script for security
+      contextIsolation: true,
+      nodeIntegration: false,
     }
   });
-  
-  // Load your app
+
   mainWindow.loadFile('index.html');
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(startProcessorAndApp);
 
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
   if (process.platform !== 'darwin') {
+    // Shutdown the payment processor gracefully
+    if (paymentSystem) {
+      console.log('Shutting down payment processor...');
+      try {
+        await paymentSystem.shutdown(); // Assuming a shutdown method exists
+        console.log('Payment processor shut down.');
+      } catch (shutdownError) {
+        console.error('Error shutting down payment processor:', shutdownError);
+      }
+    }
     app.quit();
   }
-  
-  // Shutdown the payment system
-  if (paymentSystem) {
-    paymentSystem.verificationSystem.stop();
-    paymentSystem.listenerManager.stopAll();
-    paymentSystem.server.close();
-  }
 });
+
+// Remember to implement contextBridge in preload.js to expose necessary
+// environment variables (like API_BASE_URL, API_KEY) securely to the renderer process.
 ```
+
+**Note:** Running embedded requires careful handling of paths, environment variables, and shutdown procedures, especially in packaged applications.
 
 ## API Integration
 
-### Making API Requests
+Interact with the processor's API from your application (e.g., Electron's renderer process) using an HTTP client.
 
-You can use any HTTP client library (axios, fetch, etc.) to interact with the payment system API. Here's an example using axios:
+### Setting up the API Client
+
+It's good practice to create a dedicated module for API calls.
 
 ```javascript
-const axios = require('axios');
-const config = require('./payment-config');
+// Example: api-client.js (use in Renderer process after exposing config via preload)
 
-// Create axios instance with base URL and auth header
-const apiClient = axios.create({
-  baseURL: config.api.baseUrl,
-  headers: {
-    'Authorization': `Bearer ${config.api.apiKey}`,
-    'Content-Type': 'application/json'
+// Assume API_BASE_URL and API_KEY are exposed via contextBridge in preload.js
+const API_BASE_URL = window.electronAPI.getApiBaseUrl();
+const API_KEY = window.electronAPI.getApiKey();
+
+async function makeApiRequest(endpoint, method = 'GET', body = null) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const options = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json'
+    }
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
   }
-});
 
-// Example: Create a payment session
-async function createPaymentSession(amount, network) {
   try {
-    const response = await apiClient.post('/payment-sessions', {
-      amount: amount,
-      currency: 'USDT',
-      network: network,
-      client_reference_id: `order_${Date.now()}`,
-      expiration_minutes: config.payment.expirationMinutes
-    });
-    
-    return response.data;
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Unknown API error' }));
+      console.error(`API Error (${response.status}): ${errorData.message || JSON.stringify(errorData)}`);
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    return await response.json();
   } catch (error) {
-    console.error('Failed to create payment session:', error);
+    console.error(`Network or API call error for ${method} ${endpoint}:`, error);
     throw error;
   }
 }
 
-// Example: Check payment status
-async function checkPaymentStatus(sessionId) {
-  try {
-    const response = await apiClient.get(`/payment-sessions/${sessionId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to check payment status:', error);
-    throw error;
-  }
-}
+// --- Payment Session Functions ---
 
-// Example: Recreate expired session
-async function recreateExpiredSession(sessionId) {
-  try {
-    const response = await apiClient.post(`/payment-sessions/${sessionId}/recreate`);
-    return response.data;
-  } catch (error) {
-    console.error('Failed to recreate expired session:', error);
-    throw error;
-  }
-}
-```
-
-## Implementing the Payment Flow in Your Electron App
-
-### 1. Create a Payment Component
-
-Create a payment component in your Electron app that will handle the payment flow:
-
-```javascript
-// payment.js
-const { createPaymentSession, checkPaymentStatus, recreateExpiredSession } = require('./api-client');
-
-class PaymentHandler {
-  constructor() {
-    this.currentSession = null;
-    this.statusCheckInterval = null;
-  }
-  
-  // Start a new payment
-  async startPayment(amount, network) {
-    try {
-      // Create a new payment session
-      this.currentSession = await createPaymentSession(amount, network);
-      
-      // Start polling for status updates
-      this.startStatusPolling();
-      
-      return this.currentSession;
-    } catch (error) {
-      console.error('Failed to start payment:', error);
-      throw error;
-    }
-  }
-  
-  // Start polling for payment status
-  startStatusPolling() {
-    // Clear any existing interval
-    if (this.statusCheckInterval) {
-      clearInterval(this.statusCheckInterval);
-    }
-    
-    // Set up new interval
-    this.statusCheckInterval = setInterval(async () => {
-      try {
-        const session = await checkPaymentStatus(this.currentSession.id);
-        
-        // Update current session
-        this.currentSession = session;
-        
-        // Check if payment is completed
-        if (session.status === 'COMPLETED') {
-          this.stopStatusPolling();
-          this.onPaymentCompleted(session);
-        }
-        
-        // Check if session is expired
-        if (session.status === 'EXPIRED') {
-          this.stopStatusPolling();
-          this.onSessionExpired(session);
-        }
-      } catch (error) {
-        console.error('Failed to check payment status:', error);
-      }
-    }, 5000); // Check every 5 seconds
-  }
-  
-  // Stop polling for payment status
-  stopStatusPolling() {
-    if (this.statusCheckInterval) {
-      clearInterval(this.statusCheckInterval);
-      this.statusCheckInterval = null;
-    }
-  }
-  
-  // Handle completed payment
-  onPaymentCompleted(session) {
-    // Implement your payment completion logic here
-    console.log('Payment completed:', session);
-  }
-  
-  // Handle expired session
-  onSessionExpired(session) {
-    // Implement your session expiration logic here
-    console.log('Session expired:', session);
-  }
-  
-  // Recreate an expired session
-  async recreateSession() {
-    if (!this.currentSession) {
-      throw new Error('No current session to recreate');
-    }
-    
-    try {
-      // Recreate the expired session
-      this.currentSession = await recreateExpiredSession(this.currentSession.id);
-      
-      // Start polling for status updates
-      this.startStatusPolling();
-      
-      return this.currentSession;
-    } catch (error) {
-      console.error('Failed to recreate session:', error);
-      throw error;
-    }
-  }
-  
-  // Get current session
-  getCurrentSession() {
-    return this.currentSession;
-  }
-  
-  // Calculate remaining time for current session
-  getRemainingTime() {
-    if (!this.currentSession) {
-      return 0;
-    }
-    
-    const now = new Date();
-    const expiresAt = new Date(this.currentSession.expires_at);
-    const remainingMs = expiresAt - now;
-    
-    return Math.max(0, Math.floor(remainingMs / 1000)); // Return seconds
-  }
-}
-
-module.exports = PaymentHandler;
-```
-
-### 2. Integrate with Your UI
-
-Here's an example of how to integrate the payment handler with your Electron app's UI:
-
-```javascript
-// renderer.js (in your Electron app's renderer process)
-const PaymentHandler = require('./payment');
-
-// Create payment handler instance
-const paymentHandler = new PaymentHandler();
-
-// UI Elements
-const networkSelect = document.getElementById('network-select');
-const amountInput = document.getElementById('amount-input');
-const payButton = document.getElementById('pay-button');
-const paymentAddressElement = document.getElementById('payment-address');
-const timerElement = document.getElementById('timer');
-const statusElement = document.getElementById('payment-status');
-const recreateButton = document.getElementById('recreate-button');
-
-// Timer interval
-let timerInterval = null;
-
-// Start payment when pay button is clicked
-payButton.addEventListener('click', async () => {
-  const amount = amountInput.value;
-  const network = networkSelect.value;
-  
-  if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-    alert('Please enter a valid amount');
-    return;
-  }
-  
-  try {
-    // Disable pay button
-    payButton.disabled = true;
-    
-    // Start payment
-    const session = await paymentHandler.startPayment(amount, network);
-    
-    // Display payment address
-    paymentAddressElement.textContent = session.address;
-    
-    // Start timer
-    startTimer();
-    
-    // Update status
-    statusElement.textContent = 'Waiting for payment...';
-    
-    // Enable recreate button (will be used if session expires)
-    recreateButton.disabled = true;
-  } catch (error) {
-    console.error('Failed to start payment:', error);
-    alert('Failed to start payment. Please try again.');
-    
-    // Re-enable pay button
-    payButton.disabled = false;
-  }
-});
-
-// Recreate session when recreate button is clicked
-recreateButton.addEventListener('click', async () => {
-  try {
-    // Disable recreate button
-    recreateButton.disabled = true;
-    
-    // Recreate session
-    const session = await paymentHandler.recreateSession();
-    
-    // Display new payment address
-    paymentAddressElement.textContent = session.address;
-    
-    // Start timer
-    startTimer();
-    
-    // Update status
-    statusElement.textContent = 'Waiting for payment...';
-  } catch (error) {
-    console.error('Failed to recreate session:', error);
-    alert('Failed to recreate session. Please try again.');
-    
-    // Re-enable recreate button
-    recreateButton.disabled = false;
-  }
-});
-
-// Start countdown timer
-function startTimer() {
-  // Clear any existing interval
-  if (timerInterval) {
-    clearInterval(timerInterval);
-  }
-  
-  // Update timer immediately
-  updateTimer();
-  
-  // Set up new interval
-  timerInterval = setInterval(() => {
-    updateTimer();
-  }, 1000); // Update every second
-}
-
-// Update timer display
-function updateTimer() {
-  const remainingSeconds = paymentHandler.getRemainingTime();
-  
-  if (remainingSeconds <= 0) {
-    // Timer expired
-    clearInterval(timerInterval);
-    timerInterval = null;
-    
-    // Update timer display
-    timerElement.textContent = '00:00';
-    
-    // Update status
-    statusElement.textContent = 'Session expired';
-    
-    // Enable recreate button
-    recreateButton.disabled = false;
-    
-    return;
-  }
-  
-  // Format time as MM:SS
-  const minutes = Math.floor(remainingSeconds / 60);
-  const seconds = remainingSeconds % 60;
-  
-  timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
-
-// Listen for payment completion
-document.addEventListener('payment-completed', (event) => {
-  // Clear timer
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  
-  // Update status
-  statusElement.textContent = 'Payment completed!';
-  
-  // Disable recreate button
-  recreateButton.disabled = true;
-  
-  // Re-enable pay button
-  payButton.disabled = false;
-});
-
-// Listen for session expiration
-document.addEventListener('session-expired', (event) => {
-  // Clear timer
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  
-  // Update status
-  statusElement.textContent = 'Session expired';
-  
-  // Enable recreate button
-  recreateButton.disabled = false;
-  
-  // Re-enable pay button
-  payButton.disabled = false;
-});
-```
-
-### 3. HTML Structure
-
-Here's a simple HTML structure for your payment UI:
-
-```html
-<!-- payment.html -->
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Crypto Payment</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-    }
-    select, input, button {
-      padding: 8px;
-      width: 100%;
-    }
-    .payment-info {
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-    .address {
-      word-break: break-all;
-      font-family: monospace;
-      padding: 10px;
-      background: #f5f5f5;
-      border-radius: 4px;
-    }
-    .timer {
-      font-size: 24px;
-      text-align: center;
-      margin: 15px 0;
-    }
-    .status {
-      text-align: center;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <h1>Crypto Payment</h1>
-  
-  <div class="form-group">
-    <label for="amount-input">Amount (USDT)</label>
-    <input type="number" id="amount-input" min="0.01" step="0.01" placeholder="Enter amount">
-  </div>
-  
-  <div class="form-group">
-    <label for="network-select">Network</label>
-    <select id="network-select">
-      <option value="BEP20">USDT-BEP20 (Binance Smart Chain)</option>
-      <option value="POLYGON">USDT-Polygon</option>
-    </select>
-  </div>
-  
-  <button id="pay-button">Pay Now</button>
-  
-  <div class="payment-info" id="payment-info" style="display: none;">
-    <h2>Payment Information</h2>
-    
-    <p>Please send exactly <span id="payment-amount"></span> USDT to the following address:</p>
-    
-    <div class="address" id="payment-address"></div>
-    
-    <div class="timer" id="timer">30:00</div>
-    
-    <div class="status" id="payment-status">Waiting for payment...</div>
-    
-    <button id="recreate-button" disabled>Recreate Payment Session</button>
-  </div>
-  
-  <script src="renderer.js"></script>
-</body>
-</html>
-```
-
-## Error Handling
-
-The payment system includes comprehensive error handling. Here are common errors you might encounter and how to handle them:
-
-### API Errors
-
-API errors are returned with appropriate HTTP status codes and error messages:
-
-```javascript
-try {
-  const session = await createPaymentSession(amount, network);
-  // Handle success
-} catch (error) {
-  if (error.response) {
-    // The request was made and the server responded with an error status
-    const { status, data } = error.response;
-    
-    switch (status) {
-      case 400:
-        console.error('Invalid request:', data.error.message);
-        // Handle validation errors
-        break;
-      case 401:
-        console.error('Authentication failed:', data.error.message);
-        // Handle authentication errors
-        break;
-      case 404:
-        console.error('Resource not found:', data.error.message);
-        // Handle not found errors
-        break;
-      case 500:
-        console.error('Server error:', data.error.message);
-        // Handle server errors
-        break;
-      default:
-        console.error('API error:', data.error.message);
-        // Handle other errors
-    }
-  } else if (error.request) {
-    // The request was made but no response was received
-    console.error('No response from server');
-    // Handle network errors
-  } else {
-    // Something happened in setting up the request
-    console.error('Request error:', error.message);
-    // Handle other errors
-  }
-}
-```
-
-### Payment Verification Errors
-
-The payment verification system emits events for different verification states:
-
-```javascript
-// In your main application
-const { PaymentVerificationSystem } = require('blockchain-payment-system/src/verification');
-
-// Register event handlers
-verificationSystem.on('payment.verification_failed', (data) => {
-  console.error('Payment verification failed:', data);
-  // Handle verification failure
-});
-
-verificationSystem.on('payment.verification_error', (data) => {
-  console.error('Payment verification error:', data);
-  // Handle verification error
-});
-```
-
-## Webhooks (Optional)
-
-The payment system supports webhooks for receiving payment notifications. This is useful if you want to receive notifications about payment events in an external system.
-
-### Setting Up Webhooks
-
-```javascript
-// Create a webhook
-async function createWebhook(url) {
-  try {
-    const response = await apiClient.post('/webhooks', {
-      url: url,
-      events: ['payment.completed', 'payment.expired'],
-      description: 'Payment notifications for My App'
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Failed to create webhook:', error);
-    throw error;
-  }
-}
-
-// Example usage
-createWebhook('https://myapp.com/webhooks/payment')
-  .then(webhook => {
-    console.log('Webhook created:', webhook);
-    // Store the webhook secret securely
-    const webhookSecret = webhook.secret;
-  })
-  .catch(error => {
-    console.error('Failed to create webhook:', error);
+export async function createPaymentSession(amount, network, clientRefId = null, expirationMinutes = 30) {
+  return makeApiRequest('/payment-sessions', 'POST', {
+    amount: String(amount), // Ensure amount is a string
+    currency: 'USDT',
+    network, // e.g., 'BEP20_TESTNET', 'POLYGON'
+    client_reference_id: clientRefId || `order_${Date.now()}`,
+    expiration_minutes: expirationMinutes,
+    // metadata: { customer_id: '...' } // Optional metadata
   });
-```
-
-### Handling Webhook Events
-
-On your webhook endpoint, you'll receive POST requests with payment events:
-
-```javascript
-// Example Express.js webhook handler
-const express = require('express');
-const crypto = require('crypto');
-const app = express();
-
-// Parse JSON bodies
-app.use(express.json());
-
-// Webhook secret from webhook creation
-const webhookSecret = 'whsec_abcdefghijklmnopqrstuvwxyz1234567890';
-
-// Verify webhook signature
-function verifySignature(req) {
-  const signature = req.headers['x-signature'];
-  
-  if (!signature) {
-    return false;
-  }
-  
-  // Parse signature
-  const [timestamp, version, hash] = signature.split(',');
-  const timestampValue = timestamp.split('=')[1];
-  const hashValue = hash.split('=')[1];
-  
-  // Create expected signature
-  const payload = timestampValue + '.' + JSON.stringify(req.body);
-  const expectedHash = crypto
-    .createHmac('sha256', webhookSecret)
-    .update(payload)
-    .digest('hex');
-  
-  return hashValue === expectedHash;
 }
 
-// Webhook endpoint
-app.post('/webhooks/payment', (req, res) => {
-  // Verify signature
-  if (!verifySignature(req)) {
-    return res.status(401).json({ error: 'Invalid signature' });
+export async function checkPaymentStatus(sessionId) {
+  return makeApiRequest(`/payment-sessions/${sessionId}`, 'GET');
+}
+
+export async function recreateExpiredSession(sessionId) {
+  return makeApiRequest(`/payment-sessions/${sessionId}/recreate`, 'POST');
+}
+
+// Add other API functions as needed (e.g., list sessions, get transaction)
+```
+
+### Implementing the Payment Flow in Your UI
+
+1. **Initiate Payment:**
+   * User selects the network (e.g., `BEP20`, `POLYGON_AMOY`).
+   * Call `createPaymentSession` with the amount and selected network.
+   * Display the returned payment `address` and the `expires_at` time to the user (perhaps with a countdown timer).
+   * Store the `sessionId` for status checking.
+
+2. **Monitor Status:**
+   * Use `setInterval` to periodically call `checkPaymentStatus` with the stored `sessionId`.
+   * Check the `status` field in the response:
+       * `PENDING`: Continue polling.
+       * `COMPLETED`: Payment successful! Update UI, fulfill order/service. Stop polling.
+       * `EXPIRED`: Session timed out. Inform the user. Stop polling. Offer to `recreateExpiredSession` if applicable.
+       * `ERROR` / `FAILED`: An issue occurred. Inform the user. Stop polling.
+   * Make sure to `clearInterval` when the session is no longer pending (Completed, Expired, Failed) or if the user navigates away.
+
+3. **Handle Expiration:**
+   * If a session expires (`status: EXPIRED`), you might offer the user a button to try again, which would call `recreateExpiredSession` using the original `sessionId`.
+   * This generates a *new* session with a new address and timer. Update the UI accordingly and start polling the *new* session ID.
+
+### Example UI Snippet (Conceptual)
+
+```javascript
+// In your Electron Renderer process script
+import { createPaymentSession, checkPaymentStatus, recreateExpiredSession } from './api-client.js';
+
+let currentSessionId = null;
+let statusPollInterval = null;
+
+async function startPaymentProcess(amount, network) {
+  clearStatusPoll(); // Clear previous polling if any
+  try {
+    updateUi('Creating payment session...');
+    const session = await createPaymentSession(amount, network);
+    currentSessionId = session.id;
+    displayPaymentDetails(session.address, session.amount, session.expires_at);
+    startStatusPolling(session.id);
+  } catch (error) {
+    updateUi('Error creating payment session. Please try again.');
+    console.error(error);
   }
-  
-  // Process webhook event
-  const event = req.body;
-  
-  switch (event.type) {
-    case 'payment.completed':
-      console.log('Payment completed:', event.data.payment_session);
-      // Handle payment completion
+}
+
+function startStatusPolling(sessionId) {
+  clearStatusPoll(); // Ensure only one poll runs
+  statusPollInterval = setInterval(async () => {
+    if (!currentSessionId) {
+      clearStatusPoll();
+      return;
+    }
+    try {
+      const session = await checkPaymentStatus(sessionId);
+      handleStatusUpdate(session);
+    } catch (error) {
+      console.error('Error polling status:', error);
+      // Decide if polling should stop based on the error
+      updateUi('Error checking payment status.');
+      // clearStatusPoll(); // Optional: stop on error
+    }
+  }, 10000); // Poll every 10 seconds (adjust as needed)
+}
+
+function handleStatusUpdate(session) {
+  console.log('Current Status:', session.status);
+  switch (session.status) {
+    case 'PENDING':
+      updateUi(`Waiting for payment to ${session.address}...`);
+      // Update countdown timer based on session.expires_at
       break;
-    case 'payment.expired':
-      console.log('Payment expired:', event.data.payment_session);
-      // Handle payment expiration
+    case 'COMPLETED':
+      updateUi('Payment Successful!');
+      clearStatusPoll();
+      // Unlock feature, confirm order, etc.
+      break;
+    case 'EXPIRED':
+      updateUi('Payment session expired.');
+      clearStatusPoll();
+      // Optionally offer to recreate
+      offerRecreation(session.id);
+      break;
+    case 'ERROR':
+    case 'FAILED':
+      updateUi('Payment Failed. Please contact support.');
+      clearStatusPoll();
       break;
     default:
-      console.log('Unknown event type:', event.type);
+      updateUi(`Status: ${session.status}`);
   }
-  
-  // Acknowledge receipt of webhook
-  res.status(200).json({ received: true });
-});
+}
 
-app.listen(3000, () => {
-  console.log('Webhook server listening on port 3000');
-});
+function clearStatusPoll() {
+  if (statusPollInterval) {
+    clearInterval(statusPollInterval);
+    statusPollInterval = null;
+  }
+}
+
+// Add functions like updateUi, displayPaymentDetails, offerRecreation
+// Add event listeners for user actions (e.g., button clicks to start payment)
+
+// Don't forget to call clearStatusPoll() when the component unmounts or the window closes
 ```
 
-## Testing
+## Security Considerations
 
-The payment system includes example files that demonstrate how to use each component. You can use these examples to test your integration:
+* **API Key:** Protect your `API_KEY`. Do not expose it directly in the renderer process code. Use Electron's `contextBridge` in a preload script to securely expose only necessary functions or data.
+* **HTTPS:** If deploying the processor to a remote server, ensure it uses HTTPS.
+* **Input Validation:** Validate all inputs on both the client and server sides.
+* **Environment Variables:** Use `.env` files and environment variables to manage sensitive configuration, keeping it out of version control.
 
-- `src/listeners/example.js`: Example usage of blockchain listeners
-- `src/payment/example.js`: Example usage of payment processing module
-- `src/verification/example.js`: Example usage of payment verification system
-- `src/api/example.js`: Example usage of API server
-- `src/verification/integration.js`: Example of complete system integration
+## Further Reading
 
-## Troubleshooting
-
-### Common Issues
-
-1. **API Connection Issues**
-   - Ensure the API server is running
-   - Check that the API base URL is correct
-   - Verify that the API key is valid
-
-2. **Payment Not Detected**
-   - Ensure the blockchain listeners are running
-   - Check that the explorer API keys are valid
-   - Verify that the transaction was sent to the correct address
-   - Check that the transaction amount matches the expected amount
-
-3. **Session Expiration Issues**
-   - Ensure the payment verification system is running
-   - Check that the session expiration time is set correctly
-   - Verify that the client is handling session expiration events
-
-### Logging
-
-The payment system includes comprehensive logging. You can enable debug logging by setting the `DEBUG` environment variable:
-
-```bash
-DEBUG=blockchain-payment-system:* node your-app.js
-```
-
-## Conclusion
-
-This integration guide provides the information you need to integrate the Blockchain Payment System into your Electron desktop application. The system is designed to be modular and flexible, allowing you to customize it to your specific needs.
-
-For additional help or questions, please refer to the API documentation or contact our support team.
+* [API Documentation](./api_documentation.md): Detailed descriptions of all API endpoints.
+* [Setup Instructions](./setup_instructions.md): How to configure and run the processor.

@@ -1,46 +1,50 @@
-# Blockchain Payment System API Documentation
+# Blockchain Payment Processor API Documentation
 
 ## Overview
 
-This document provides detailed information about the RESTful API endpoints available in the Blockchain Payment System. These endpoints allow you to integrate cryptocurrency payment functionality into your applications.
+This document provides detailed information about the RESTful API endpoints available in the Blockchain Payment Processor. These endpoints allow you to integrate cryptocurrency payment functionality into your applications.
 
 ## Base URL
 
-All API endpoints are relative to the base URL:
+All API endpoints are relative to the base URL where the processor is running. This is typically configured via the `HOST` and `PORT` environment variables (defaulting to `http://localhost:3000`). The full base path for API v1 is:
 
 ```
-http://your-server:3000/api/v1
+http://your-server-address:PORT/api/v1
 ```
+
+Example: `http://localhost:3000/api/v1`
 
 ## Authentication
 
-All API requests require authentication using an API key. Include the API key in the `Authorization` header of your requests:
+All API requests require authentication using an API key. The key should be set in the processor's `.env` file using the `API_KEY` variable.
 
-```
+Include the API key in the `Authorization` header of your requests as a Bearer token:
+
+```http
 Authorization: Bearer your_api_key_here
 ```
 
 ## Error Handling
 
-The API uses standard HTTP status codes to indicate the success or failure of requests. In case of an error, the response body will contain an error object with details:
+The API uses standard HTTP status codes to indicate the success or failure of requests. In case of an error, the response body will typically contain a JSON object with details:
 
 ```json
 {
   "error": {
     "code": "error_code",
-    "message": "Human-readable error message",
-    "details": {
-      "field_name": ["Error details for this field"]
-    }
+    "message": "Human-readable error message"
+    // Optional: "details" field with more specific info
   }
 }
 ```
 
-Common error codes:
-- `unauthorized`: Authentication failed
-- `invalid_request`: Invalid request parameters
-- `not_found`: Resource not found
-- `server_error`: Unexpected server error
+**Common Error Codes:**
+
+*   `400 Bad Request`: Invalid request parameters (e.g., missing fields, wrong format). The `message` or `details` field often specifies the issue.
+*   `401 Unauthorized`: Authentication failed (missing or incorrect `API_KEY` in the `Authorization` header).
+*   `404 Not Found`: The requested resource (e.g., a specific payment session ID) does not exist.
+*   `429 Too Many Requests`: Rate limit exceeded. Check server configuration or documentation for specific limits.
+*   `500 Internal Server Error`: An unexpected error occurred on the server.
 
 ## Rate Limiting
 
