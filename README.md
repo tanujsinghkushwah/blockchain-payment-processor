@@ -4,7 +4,7 @@ Easily accept USDT cryptocurrency payments on popular blockchain networks within
 
 ## Overview
 
-This system allows you to integrate USDT payments (on BEP20/Binance Smart Chain and Polygon networks, including testnets) directly into your projects, especially desktop applications built with Electron.
+This system allows you to integrate USDT payments (on BEP20/Binance Smart Chain and Polygon networks, including testnets) directly into your projects.
 
 ## Key Features
 
@@ -78,6 +78,8 @@ For more in-depth information, explore the `/docs` folder:
 *   [Setup Instructions](./docs/setup_instructions.md)
 *   [Integration Guide](./docs/integration/integration_guide.md)
 *   [API Documentation](./docs/integration/api_documentation.md)
+
+For business queries, please drop an email to tanujsinghkushwah@gmail.com
 
 ## License
 
