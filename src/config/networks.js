@@ -56,7 +56,7 @@ module.exports = {
     rpcUrl: process.env.POLYGON_MAINNET_HTTPS_URL, // Added mainnet RPC URL
     tokenName: 'USDT-Polygon',
     tokenDecimals: 6,
-    tokenContractAddress: '0xc2132d05d31c914a87c6611c10748aeb04b58e8f', // USDT on Polygon
+    tokenContractAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', // USDT on Polygon
     recipientAddress: process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET, // Use specific Polygon mainnet recipient address
     targetAmount: process.env.TARGET_USDT_AMOUNT || null, // Use unified target amount
     // Minimal ABI for Transfer event: event Transfer(address indexed from, address indexed to, uint256 value)
