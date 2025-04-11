@@ -116,7 +116,23 @@ class PaymentSessionManager {
    */
   async getSession(sessionId) {
     // In a real implementation, this would query the database
-    // For this example, we'll return null
+    // For testing, return a sample session if the ID is provided
+    if (sessionId) {
+      return {
+        id: sessionId,
+        amount: '100',
+        currency: 'USDT',
+        network: 'BEP20',
+        status: 'PENDING',
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
+        completed_at: null,
+        client_reference_id: 'test-reference',
+        address: '0x1234567890abcdef1234567890abcdef12345678',
+        metadata: {}
+      };
+    }
+    
     return null;
   }
 
@@ -128,9 +144,26 @@ class PaymentSessionManager {
    */
   async updateSession(sessionId, updates) {
     // In a real implementation, this would update the database
-    // For this example, we'll just log it
+    // For testing, we'll return an updated session
     console.log(`Updating session ${sessionId} with:`, updates);
-    return null;
+    
+    const session = await this.getSession(sessionId);
+    if (!session) {
+      return null;
+    }
+    
+    // Apply updates to the session
+    const updatedSession = {
+      ...session,
+      ...updates,
+      // If there's metadata in updates, merge it with existing metadata
+      metadata: {
+        ...(session.metadata || {}),
+        ...(updates.metadata || {})
+      }
+    };
+    
+    return updatedSession;
   }
 
   /**
@@ -207,8 +240,22 @@ class PaymentSessionManager {
    */
   async listSessions(filters = {}) {
     // In a real implementation, this would query the database with filters
-    // For this example, we'll return an empty array
-    return [];
+    // For now, we'll return a dummy session for testing
+    const dummySession = {
+      id: 'dummy-session-id',
+      amount: '100',
+      currency: 'USDT',
+      network: 'BEP20',
+      status: 'PENDING',
+      created_at: new Date(),
+      expires_at: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
+      completed_at: null,
+      client_reference_id: 'test-reference',
+      address: '0x1234567890abcdef1234567890abcdef12345678',
+      metadata: {}
+    };
+    
+    return [dummySession];
   }
 
   /**

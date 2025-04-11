@@ -15,6 +15,56 @@ function getActiveNetworksFromEnv() {
   console.log('DEBUG: Parsed active networks from env:', networks); // Debug log
   return networks;
 }
+
+// --- Parse arguments for TARGET_USDT_AMOUNT ---
+function parseArguments() {
+  console.log('DEBUG: Parsing command line arguments...');
+  console.log('DEBUG: process.argv =', process.argv);
+  
+  // Check if TARGET_USDT_AMOUNT exists in env before parsing
+  console.log(`DEBUG: TARGET_USDT_AMOUNT in env before parsing: ${process.env.TARGET_USDT_AMOUNT}`);
+  
+  // Extract all arguments potentially containing TARGET_USDT_AMOUNT
+  // This includes directly from argv as well as from npm_config_* env variables
+  const args = {};
+  
+  // Check normal command line arguments
+  process.argv.forEach((arg) => {
+    if (arg.startsWith('--TARGET_USDT_AMOUNT=')) {
+      args.targetAmount = arg.split('=')[1];
+      console.log(`DEBUG: Found TARGET_USDT_AMOUNT in direct arguments: ${args.targetAmount}`);
+    }
+  });
+  
+  // Check npm_config_* environment variables (npm passes arguments this way)
+  const npmConfigPrefix = 'npm_config_';
+  Object.keys(process.env).forEach(key => {
+    if (key.toLowerCase() === 'npm_config_target_usdt_amount') {
+      args.targetAmount = process.env[key];
+      console.log(`DEBUG: Found TARGET_USDT_AMOUNT in npm config env: ${args.targetAmount}`);
+    }
+  });
+  
+  // As a fallback, check if it's directly set in the npm run command
+  if (process.env.TARGET_USDT_AMOUNT) {
+    args.targetAmount = process.env.TARGET_USDT_AMOUNT;
+    console.log(`DEBUG: TARGET_USDT_AMOUNT already set in environment: ${args.targetAmount}`);
+  }
+  
+  // If TARGET_USDT_AMOUNT was found, override the env var
+  if (args.targetAmount) {
+    process.env.TARGET_USDT_AMOUNT = args.targetAmount;
+    console.log(`Setting TARGET_USDT_AMOUNT to ${args.targetAmount}`);
+    
+    // Verify it was set
+    console.log(`DEBUG: TARGET_USDT_AMOUNT in env after setting: ${process.env.TARGET_USDT_AMOUNT}`);
+  } else {
+    console.log('DEBUG: No TARGET_USDT_AMOUNT found in command line arguments or environment');
+  }
+  
+  return args;
+}
+// --- End Parse arguments ---
 // --- End Environment Variable Parsing ---
 
 /**
@@ -85,6 +135,9 @@ async function startCompleteSystem(networksToStart) { // Accept networks argumen
 
 // If this file is run directly, start the system
 if (require.main === module) {
+  // Parse command line arguments before we check for networks
+  parseArguments();
+  
   const networksToStart = getActiveNetworksFromEnv(); // Get networks from ENV variable
 
   if (networksToStart.length === 0) {

@@ -1,73 +1,86 @@
 /**
- * Example usage of the API server
- * This file demonstrates how to set up and start the API server
+ * API Example
+ * Example of how to use the API components
  */
-const { createServer, startServer } = require('./index');
-const { PaymentProcessor } = require('../payment');
+const { initializeApiServer } = require('./server');
+const { PaymentProcessor, PaymentSessionManager } = require('../payment');
 const ListenerManager = require('../listeners/ListenerManager');
-const { PaymentSessionManager } = require('../payment');
-
-// In a real application, these would be database connections and configurations
-const mockDb = {
-  // Mock database methods would go here
-};
-
-const mockConfig = {
-  // Mock configuration would go here
-};
 
 /**
- * Initialize and start the API server
+ * Initialize the API server with all necessary components
+ * @param {Array} networksToStart - Optional array of network names to start listeners for
+ * @param {Object} networkConfigs - Network configurations object
+ * @returns {Promise<Object>} - Object containing the initialized components
  */
-async function initializeApiServer(networksToStart = []) {
+async function initializeApi(networksToStart = [], networkConfigs) {
   try {
-    // Create the listener manager
-    const listenerManager = new ListenerManager(mockDb);
+    // Create a session manager for the payment processor
+    const sessionManager = new PaymentSessionManager(null, networkConfigs);
     
-    // Initialize and start ONLY the specified blockchain listeners
-    if (networksToStart && networksToStart.length > 0) {
-      console.log(`Initializing listeners for specified networks: ${networksToStart.join(', ')}`);
-      // Initialize only the requested listeners
-      await listenerManager.initialize(networksToStart); // Pass array to initialize
-      // Start only the requested listeners
-      await listenerManager.start(networksToStart); // Pass array to start
-    } else {
-      console.warn('No networks specified to start via command line. No listeners will be active.');
-      // Optionally, initialize/start defaults if needed when none are specified
-      // await listenerManager.initialize(['DEFAULT_NETWORK']); 
-      // await listenerManager.start(['DEFAULT_NETWORK']); 
-    }
-    
-    // Create the payment session manager
-    const sessionManager = new PaymentSessionManager(mockDb, mockConfig);
-    
-    // Create the payment processor
-    const paymentProcessor = new PaymentProcessor(mockDb, sessionManager, listenerManager);
+    // Create a payment processor with the session manager
+    const paymentProcessor = new PaymentProcessor(null, sessionManager);
     
     // Initialize the payment processor
     await paymentProcessor.initialize();
     
-    // Create the API server
-    const app = createServer(paymentProcessor, listenerManager, mockDb);
+    // Create and initialize the listener manager
+    const listenerManager = new ListenerManager();
     
-    // Start the API server
-    const server = await startServer(app);
+    // Initialize and start listeners based on network configuration and active networks list
+    const networksToInitialize = [];
     
-    console.log('API server initialized and started');
+    Object.keys(networkConfigs).forEach(networkName => {
+      const networkConfig = networkConfigs[networkName];
+      
+      // Only add the listener if the network should be active and is in the list of networks to start
+      // If networksToStart is empty, we use the isActive flag from the network config
+      const shouldStart = networksToStart.length === 0 
+        ? networkConfig.isActive 
+        : networksToStart.includes(networkName) && networkConfig.isActive;
+      
+      if (shouldStart) {
+        console.log(`Preparing to initialize listener for ${networkName}`);
+        networksToInitialize.push(networkName);
+      } else {
+        console.log(`Skipping listener for ${networkName}`);
+      }
+    });
     
-    return {
-      app,
-      server,
-      paymentProcessor,
-      listenerManager
-    };
+    // Initialize listeners
+    if (networksToInitialize.length > 0) {
+      await listenerManager.initialize(networksToInitialize);
+    }
+    
+    // Initialize the API server with the payment processor and listener manager
+    // We're passing null for the db parameter as it's not implemented in this example
+    // We're passing the networks config for the transaction storage to use for status updates
+    const { app, server, transactionStorage } = await initializeApiServer(paymentProcessor, listenerManager, null, networkConfigs);
+    
+    // Start the listeners
+    if (networksToInitialize.length > 0) {
+      await listenerManager.start(networksToInitialize);
+    }
+    
+    // Connect the listener manager's transaction events to the payment processor
+    listenerManager.on('transaction.detected', (data) => {
+      // Process detected transactions
+      console.log(`Processing transaction ${data.transactionId} for session ${data.sessionId}`);
+      paymentProcessor.processTransaction(data);
+    });
+    
+    listenerManager.on('transaction.confirmed', (data) => {
+      // Process confirmed transactions
+      console.log(`Transaction ${data.transactionId} has been confirmed`);
+      paymentProcessor.confirmTransaction(data);
+    });
+    
+    return { app, server, paymentProcessor, listenerManager, transactionStorage };
   } catch (error) {
-    console.error('Failed to initialize API server:', error);
+    console.error('Failed to initialize API:', error);
     throw error;
   }
 }
 
-// Export the initialization function
 module.exports = {
-  initializeApiServer
+  initializeApiServer: initializeApi
 };

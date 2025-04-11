@@ -1,79 +1,132 @@
 /**
  * API Server
- * Main entry point for the API server
+ * Creates and configures the Express server for the API
  */
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const config = require('./config');
-const { errorHandler, notFound } = require('./middleware');
+const { errorHandler } = require('./middleware');
 const createRoutes = require('./routes');
+const config = require('./config');
+const TransactionStorage = require('./services/TransactionStorage');
 
 /**
- * Create and configure the API server
- * @param {Object} paymentProcessor - Payment processor instance
- * @param {Object} listenerManager - Blockchain listener manager instance
- * @param {Object} db - Database connection object
+ * Create and configure the Express server
+ * @param {Object} networkConfig - Network configuration
  * @returns {Object} - Express app
  */
-function createServer(paymentProcessor, listenerManager, db) {
+function createServer(networkConfig) {
   const app = express();
   
-  // Apply middleware
+  // Initialize the transaction storage
+  const transactionStorage = new TransactionStorage(networkConfig);
+  
+  // Add transaction storage to the app for direct access in other modules
+  app.locals.transactionStorage = transactionStorage;
+  
+  // Configure middleware
+  app.use(cors());
   app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
   
-  // Apply CORS
-  app.use(cors(config.cors));
+  // Add simple request logger middleware
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+  });
   
-  // Apply rate limiting
-  app.use(rateLimit(config.api.rateLimits));
+  // Set up rate limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false
+  });
+  app.use(limiter);
   
-  // Apply routes
-  app.use(config.api.prefix, createRoutes(paymentProcessor, listenerManager, db));
+  // Add app info endpoint
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'Blockchain Payment System API',
+      version: '1.0.0',
+      status: 'running'
+    });
+  });
   
-  // Apply error handling
-  app.use(notFound);
+  // Add error handler
   app.use(errorHandler);
   
-  return app;
+  return { app, transactionStorage };
 }
 
 /**
- * Start the API server
- * @param {Object} app - Express app
- * @returns {Promise<Object>} - Promise resolving with the HTTP server instance
+ * Initialize and start the Express server for the API
+ * @param {Object} paymentProcessor - Payment processor instance
+ * @param {Object} listenerManager - Blockchain listener manager instance
+ * @param {Object} db - Database connection object 
+ * @param {Object} networkConfig - Network configuration
+ * @returns {Promise<Object>} - Express app and server objects
  */
-function startServer(app) {
-  return new Promise((resolve, reject) => {
-    try {
-      const server = app.listen(config.server.port, config.server.host, () => {
-        // Use setImmediate to allow the event loop to process the 'listening' state fully
-        setImmediate(() => {
-            if (server.address()) {
-                console.log(`API server listening on ${config.server.host}:${server.address().port}`);
-                resolve(server); // Resolve ONLY after confirming address is available
-            } else {
-                // This case should ideally not happen if the callback fired, but handle defensively
-                console.error('Server listening callback fired, but server.address() is still null!');
-                reject(new Error('Server failed to bind address after listening callback.'));
-            }
-        });
-      });
+async function initializeApiServer(paymentProcessor, listenerManager, db, networkConfig) {
+  const { app, transactionStorage } = createServer(networkConfig);
+  
+  // Create API routes
+  const router = createRoutes(paymentProcessor, listenerManager, db, transactionStorage, networkConfig);
+  
+  // Use API routes
+  app.use('/api', router);
 
-      server.on('error', (error) => {
-          console.error('Server startup error:', error);
-          reject(error); // Reject the promise on error
-      });
-
-    } catch (error) {
-        console.error('Error initiating server listen:', error);
-        reject(error);
-    }
+  // Start the server
+  const PORT = process.env.PORT || 3000;
+  const server = app.listen(PORT, () => {
+    console.log(`API server started on port ${PORT}`);
   });
+  
+  // Listen for blockchain transactions and store them locally
+  if (listenerManager) {
+    listenerManager.on('transaction.detected', (data) => {
+      console.log('Transaction detected:', data);
+      
+      // If the data contains a complete transaction object, use it directly
+      if (data.transaction) {
+        const txData = {
+          id: data.transactionId,
+          sessionId: data.sessionId,
+          ...data.transaction
+        };
+        console.log('Storing complete transaction data:', txData);
+        transactionStorage.addTransaction(txData);
+      } else {
+        // Otherwise try to find the transaction in the payment processor
+        const transaction = paymentProcessor.getTransactionById(data.transactionId);
+        if (transaction) {
+          console.log('Retrieved transaction from payment processor:', transaction);
+          transactionStorage.addTransaction(transaction);
+        } else {
+          console.warn(`Transaction ${data.transactionId} not found in payment processor`);
+          // Store minimal transaction data
+          const minimalTxData = {
+            id: data.transactionId,
+            sessionId: data.sessionId,
+            txHash: data.txHash || `unknown_${data.transactionId}`,
+            fromAddress: data.fromAddress || 'unknown',
+            toAddress: data.toAddress || 'unknown',
+            amount: data.amount || '0',
+            currency: data.currency || 'unknown',
+            network: data.network || 'unknown',
+            status: 'PENDING',
+            detectedAt: new Date()
+          };
+          console.log('Storing minimal transaction data:', minimalTxData);
+          transactionStorage.addTransaction(minimalTxData);
+        }
+      }
+    });
+  }
+  
+  return { app, server, paymentProcessor, listenerManager, transactionStorage };
 }
 
 module.exports = {
   createServer,
-  startServer
+  initializeApiServer
 };

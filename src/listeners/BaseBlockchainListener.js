@@ -127,6 +127,22 @@ class BaseBlockchainListener {
   }
 
   /**
+   * Store a transaction
+   * @param {Object} transactionData - Transaction data to store
+   * @returns {Promise<Object>} - Stored transaction with ID
+   */
+  async storeTransaction(transactionData) {
+    // Normally this would store in a database, but for simplicity we'll just add an ID
+    const id = `tx_${Date.now()}`;
+    const storedTx = {
+      id,
+      ...transactionData
+    };
+    
+    return storedTx;
+  }
+
+  /**
    * Process a detected transaction
    * @param {Object} transaction - The transaction object from the event log
    * @returns {Promise<void>}
@@ -190,59 +206,100 @@ class BaseBlockchainListener {
             // Emit event for payment completion
             this.eventEmitter.emit('transaction.confirmed', {
               transactionId: existingTx.id,
-              sessionId: paymentAddress.sessionId
+              sessionId: paymentAddress.sessionId,
+              transaction: existingTx // Include full transaction data
             });
           }
         }
         return;
       }
 
-      // This is a new transaction, record it
-      const newTx = await this.createTransaction({
+      // Create a new transaction record
+      const formattedAmount = this.formatAmount(transaction.value, this.config.tokenDecimals);
+      
+      // Create transaction object to store
+      const txRecord = {
         sessionId: paymentAddress.sessionId,
         txHash: transaction.hash,
         fromAddress: transaction.from,
         toAddress: transaction.to,
-        amount: this.formatTokenAmount(transaction.value, this.config.tokenDecimals),
+        amount: formattedAmount,
         currency: this.config.tokenName,
         network: this.config.name,
         confirmations: transaction.confirmations,
-        status: transaction.confirmations >= this.config.requiredConfirmations ? 'CONFIRMED' : 'PENDING',
+        status: 'PENDING',
         detectedAt: new Date(),
-        confirmedAt: transaction.confirmations >= this.config.requiredConfirmations ? new Date() : null,
+        confirmedAt: null,
         blockNumber: transaction.blockNumber
-      });
-
-      // Emit event for new transaction
+      };
+      
+      console.log(`[${this.config.name}] Created transaction record:`, txRecord);
+      
+      // Store transaction in database
+      const storedTx = await this.storeTransaction(txRecord);
+      
+      // Emit event for payment detection
       this.eventEmitter.emit('transaction.detected', {
-        transactionId: newTx.id,
-        sessionId: paymentAddress.sessionId
+        transactionId: storedTx.id,
+        sessionId: paymentAddress.sessionId,
+        transaction: storedTx // Include full transaction data
       });
-
-      // If transaction has enough confirmations, mark payment as completed
+      
+      // Check if we have enough confirmations to immediately confirm
       if (transaction.confirmations >= this.config.requiredConfirmations) {
+        await this.confirmTransaction(storedTx.id);
+        
         // Emit event for payment completion
         this.eventEmitter.emit('transaction.confirmed', {
-          transactionId: newTx.id,
-          sessionId: paymentAddress.sessionId
+          transactionId: storedTx.id,
+          sessionId: paymentAddress.sessionId,
+          transaction: storedTx // Include full transaction data
         });
       }
-
+      
       console.log(`[${this.config.name}] Processed transaction ${transaction.hash} for address ${transaction.to}`);
     } catch (error) {
-      console.error(`[${this.config.name}] Failed to process transaction:`, error);
-      throw error;
+      console.error(`[${this.config.name}] Error processing transaction:`, error);
     }
   }
 
   /**
-   * Format token amount based on decimals
-   * @param {string} amount - The amount in smallest unit
-   * @param {number} decimals - The number of decimals
+   * Format token amount from smallest unit to human-readable form
+   * @param {string|number|BigInt} amount - Amount in smallest unit
+   * @param {number} decimals - Token decimals
    * @returns {string} - Formatted amount
    */
-  formatTokenAmount(amount, decimals) {
-    return (BigInt(amount) / BigInt(10 ** decimals)).toString();
+  formatAmount(amount, decimals) {
+    try {
+      // Convert to string to handle BigInt
+      const amountStr = amount.toString();
+      
+      // For 0 decimals, return as is
+      if (decimals === 0) {
+        return amountStr;
+      }
+      
+      // For regular tokens with decimals, format properly
+      const amountBigInt = BigInt(amountStr);
+      const divisor = BigInt(10) ** BigInt(decimals);
+      const wholePart = amountBigInt / divisor;
+      const fractionalPart = amountBigInt % divisor;
+      
+      // Convert fractional part to string with leading zeros
+      let fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+      
+      // Remove trailing zeros from fractional part
+      fractionalStr = fractionalStr.replace(/0+$/, '');
+      
+      if (fractionalStr === '') {
+        return wholePart.toString();
+      }
+      
+      return `${wholePart}.${fractionalStr}`;
+    } catch (error) {
+      console.error('Error formatting amount:', error);
+      return amount.toString();
+    }
   }
 
   /**

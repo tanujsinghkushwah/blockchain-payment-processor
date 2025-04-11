@@ -14,6 +14,8 @@ This system allows you to integrate USDT payments (on BEP20/Binance Smart Chain 
 *   **Real-time Monitoring:** Automatically detects incoming transactions on the blockchain.
 *   **Configurable Verification:** Set the number of block confirmations required to validate a payment.
 *   **Simple REST API:** Integrate the payment system easily using standard web requests.
+*   **Transaction Monitoring:** Local endpoint to monitor all detected transactions.
+*   **Configurable Target Amount:** Set target USDT amount via command line arguments.
 
 ## Installation
 
@@ -63,6 +65,27 @@ By default, the system might try to connect to multiple networks. You can specif
     *(You'll see a warning if no networks are active).*
 
 **Available Network IDs:** `BEP20`, `POLYGON`, `BEP20_TESTNET`, `POLYGON_AMOY`.
+
+## Setting TARGET_USDT_AMOUNT via Command Line
+
+You can specify the target USDT amount that the system should look for when detecting transactions by using a command line argument:
+
+```powershell
+$env:ACTIVE_NETWORKS='BEP20'; npm start -- --TARGET_USDT_AMOUNT=2.5
+```
+
+This will override any TARGET_USDT_AMOUNT set in your .env file and configure the system to validate transactions of 2.5 USDT (with 5% tolerance).
+
+## Local Transaction Monitoring
+
+The system now exposes a local API endpoint for monitoring detected transactions:
+
+- **GET /api/local-transactions** - Returns all detected transactions with their current status
+- **GET /api/local-transactions/:txHash** - Returns a specific transaction by hash
+
+These endpoints are available at `http://localhost:3000/api/local-transactions` while the server is running and will check the blockchain explorers for the latest status of each transaction before returning the data.
+
+Transaction data is stored in memory while the server is running. Restarting the server will clear the transaction history.
 
 ## Requirements
 

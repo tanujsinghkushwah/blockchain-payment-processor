@@ -8,15 +8,18 @@ const PaymentSessionsController = require('./controllers/PaymentSessionsControll
 const TransactionsController = require('./controllers/TransactionsController');
 const WebhooksController = require('./controllers/WebhooksController');
 const SystemController = require('./controllers/SystemController');
+const LocalTransactionsController = require('./controllers/LocalTransactionsController');
 
 /**
  * Create API routes
  * @param {Object} paymentProcessor - Payment processor instance
  * @param {Object} listenerManager - Blockchain listener manager instance
  * @param {Object} db - Database connection object
+ * @param {Object} transactionStorage - Transaction storage instance
+ * @param {Object} networkConfig - Network configuration object
  * @returns {Object} - Express router
  */
-function createRoutes(paymentProcessor, listenerManager, db) {
+function createRoutes(paymentProcessor, listenerManager, db, transactionStorage, networkConfig) {
   const router = express.Router();
   
   // Initialize controllers
@@ -24,8 +27,13 @@ function createRoutes(paymentProcessor, listenerManager, db) {
   const transactionsController = new TransactionsController(paymentProcessor);
   const webhooksController = new WebhooksController(db);
   const systemController = new SystemController(listenerManager);
+  const localTransactionsController = new LocalTransactionsController(transactionStorage, networkConfig);
   
-  // Apply authentication middleware to all routes
+  // Create local transactions routes without authentication
+  router.get('/local-transactions', localTransactionsController.getAllTransactions.bind(localTransactionsController));
+  router.get('/local-transactions/:txHash', localTransactionsController.getTransactionByHash.bind(localTransactionsController));
+  
+  // Apply authentication middleware to all authenticated routes
   router.use(authenticate);
   
   // Payment Sessions routes

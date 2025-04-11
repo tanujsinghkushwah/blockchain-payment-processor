@@ -4,7 +4,18 @@
  */
 const BEP20Listener = require('./BEP20Listener');
 const PolygonListener = require('./PolygonListener');
-const networks = require('../config/networks');
+const networkLoader = require('../config/networks');
+
+/**
+ * Get the latest network configurations
+ * @returns {Object} The network configurations
+ */
+function getLatestNetworks() {
+  if (typeof networkLoader === 'function') {
+    return networkLoader();
+  }
+  return networkLoader.configs || networkLoader;
+}
 
 /**
  * Create a blockchain listener for the specified network
@@ -14,6 +25,7 @@ const networks = require('../config/networks');
  * @returns {Object} - The appropriate blockchain listener instance
  */
 function createListener(networkType, db, eventEmitter) {
+  const networks = getLatestNetworks();
   const config = networks[networkType];
   
   if (!config) {
@@ -35,7 +47,10 @@ function createListener(networkType, db, eventEmitter) {
   }
 }
 
+// Get current networks for the supportedNetworks list
+const currentNetworks = getLatestNetworks();
+
 module.exports = {
   createListener,
-  supportedNetworks: Object.keys(networks)
+  supportedNetworks: Object.keys(currentNetworks)
 };
