@@ -66,15 +66,59 @@ By default, the system might try to connect to multiple networks. You can specif
 
 **Available Network IDs:** `BEP20`, `POLYGON`, `BEP20_TESTNET`, `POLYGON_AMOY`.
 
-## Setting TARGET_USDT_AMOUNT via Command Line
+## Setting Parameters via Command Line
 
-You can specify the target USDT amount that the system should look for when detecting transactions by using a command line argument:
+You can specify various parameters via command line arguments:
+
+### Target USDT Amount
+
+Set the target USDT amount that the system should look for when detecting transactions:
 
 ```powershell
-$env:ACTIVE_NETWORKS='BEP20'; npm start -- --TARGET_USDT_AMOUNT=2.5
+$env:ACTIVE_NETWORKS='BEP20'; npm start -- --TARGET_USDT_AMOUNT=2.5 --RECIPIENT_ADDRESS_BNB_MAINNET=0x813xxxxxxxxxxx1 --BSC_MAINNET_HTTPS_URL=https://bsc-mainnet.infura.io/v3/xxxxxxxxx
 ```
 
 This will override any TARGET_USDT_AMOUNT set in your .env file and configure the system to validate transactions of 2.5 USDT (with 5% tolerance).
+
+### Recipient Addresses
+
+You can also specify recipient addresses for different networks:
+
+```powershell
+$env:ACTIVE_NETWORKS='BEP20'; npm start -- --RECIPIENT_ADDRESS_BNB_MAINNET=0xYourAddress
+```
+
+```powershell
+$env:ACTIVE_NETWORKS='POLYGON'; npm start -- --RECIPIENT_ADDRESS_POLYGON_MAINNET=0xYourAddress
+```
+
+### API Keys and RPC URLs
+
+For dynamic configuration, you can also inject API keys and RPC URLs:
+
+```powershell
+npm start -- --BSCSCAN_API_KEY=YourBscScanApiKey
+```
+
+```powershell
+npm start -- --POLYGONSCAN_API_KEY=YourPolygonScanApiKey
+```
+
+```powershell
+npm start -- --BSC_MAINNET_HTTPS_URL=https://your-bsc-rpc-url
+```
+
+```powershell
+npm start -- --POLYGON_MAINNET_HTTPS_URL=https://your-polygon-rpc-url
+```
+
+### Combining Multiple Parameters
+
+You can combine multiple parameters in a single command:
+
+```powershell
+$env:ACTIVE_NETWORKS='BEP20,POLYGON'; npm start -- --TARGET_USDT_AMOUNT=1 --RECIPIENT_ADDRESS_BNB_MAINNET=0xYourAddress --BSCSCAN_API_KEY=YourKey
+```
 
 ## Local Transaction Monitoring
 
