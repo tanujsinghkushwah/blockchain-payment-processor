@@ -86,47 +86,77 @@ class TransactionStorage {
 
     try {
       let apiUrl, params;
+      const Web3 = require('web3');
+      const web3 = new Web3(networkSettings.rpcUrl);
 
-      // Different implementation for each network
-      if (network === 'POLYGON') {
-        apiUrl = networkSettings.explorerApiUrl;
-        params = {
-          module: 'transaction',
-          action: 'gettxreceiptstatus',
-          txhash: txHash,
-          apikey: networkSettings.explorerApiKey
-        };
-      } else if (network === 'BEP20' || network === 'BEP20_TESTNET') {
-        apiUrl = networkSettings.explorerApiUrl;
-        params = {
-          module: 'transaction',
-          action: 'gettxreceiptstatus',
-          txhash: txHash,
-          apikey: networkSettings.explorerApiKey
-        };
-      } else {
-        console.error(`Explorer API not configured for network ${network}`);
-        return tx;
-      }
-
-      const response = await axios.get(apiUrl, { params });
+      // First, get current block number from the network
+      const currentBlockNumber = await web3.eth.getBlockNumber();
       
-      if (response.data.status === '1') {
-        // Transaction confirmed
+      // Then check transaction receipt
+      const receipt = await web3.eth.getTransactionReceipt(txHash);
+      
+      // Calculate confirmations if we have a receipt and block number
+      let confirmations = 0;
+      let status = tx.status;
+      
+      if (receipt) {
+        // Calculate confirmations based on current block and transaction block
+        confirmations = receipt.blockNumber ? currentBlockNumber - receipt.blockNumber + 1 : 0;
+        
+        // Update status based on receipt status and confirmations
+        if (receipt.status) {
+          if (confirmations >= networkSettings.requiredConfirmations) {
+            status = 'CONFIRMED';
+          } else {
+            status = 'PENDING';
+          }
+        } else {
+          status = 'FAILED';
+        }
+        
+        // Update transaction
         const updatedTx = {
           ...tx,
-          status: 'CONFIRMED',
-          confirmations: networkSettings.requiredConfirmations,
-          confirmedAt: new Date(),
+          status,
+          confirmations,
+          blockNumber: receipt.blockNumber,
+          confirmedAt: status === 'CONFIRMED' && !tx.confirmedAt ? new Date() : tx.confirmedAt,
           updatedAt: new Date()
         };
         
         this.transactions[txIndex] = updatedTx;
         return updatedTx;
-      } else {
-        // Keep current status
-        return tx;
       }
+      
+      // Fallback to explorer API if RPC doesn't provide enough info
+      if (network === 'POLYGON' || network === 'BEP20' || network === 'BEP20_TESTNET') {
+        apiUrl = networkSettings.explorerApiUrl;
+        params = {
+          module: 'transaction',
+          action: 'gettxreceiptstatus',
+          txhash: txHash,
+          apikey: networkSettings.explorerApiKey
+        };
+
+        const response = await axios.get(apiUrl, { params });
+        
+        if (response.data.status === '1') {
+          // Transaction confirmed according to explorer
+          const updatedTx = {
+            ...tx,
+            status: 'CONFIRMED',
+            confirmations: networkSettings.requiredConfirmations,
+            confirmedAt: tx.confirmedAt || new Date(),
+            updatedAt: new Date()
+          };
+          
+          this.transactions[txIndex] = updatedTx;
+          return updatedTx;
+        }
+      }
+      
+      // No updates, return current transaction
+      return tx;
     } catch (error) {
       console.error(`Error updating transaction status: ${error.message}`);
       return tx;
