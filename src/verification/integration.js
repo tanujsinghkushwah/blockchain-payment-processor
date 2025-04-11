@@ -2,7 +2,8 @@
  * Integration with Main Application
  * This file demonstrates how to integrate the payment verification system with the main application
  */
-require('dotenv').config(); // Load .env variables AT THE VERY START
+// IMPORTANT: Load .env variables AFTER checking command line arguments
+// require('dotenv').config(); // MOVED - Will be loaded after command line parsing
 
 const { startBlockchainPaymentSystem } = require('../index');
 const { PaymentVerificationSystem } = require('./index');
@@ -20,6 +21,17 @@ function getActiveNetworksFromEnv() {
 function parseArguments() {
   console.log('DEBUG: Parsing command line arguments...');
   console.log('DEBUG: process.argv =', process.argv);
+  
+  // Important - store original values before any .env file loading
+  const originalEnv = {
+    targetAmount: process.env.TARGET_USDT_AMOUNT,
+    senderAddress: process.env.SENDER_ADDRESS,
+    recipientAddressBnb: process.env.RECIPIENT_ADDRESS_BNB_MAINNET,
+    recipientAddressPolygon: process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET,
+  };
+  
+  // Now load .env file AFTER storing original command line values
+  require('dotenv').config();
   
   // Check if TARGET_USDT_AMOUNT exists in env before parsing
   console.log(`DEBUG: TARGET_USDT_AMOUNT in env before parsing: ${process.env.TARGET_USDT_AMOUNT}`);
@@ -102,39 +114,72 @@ function parseArguments() {
     }
   });
   
-  // As a fallback, check if it's directly set in the npm run command
-  if (process.env.TARGET_USDT_AMOUNT) {
+  // RESTORE command line values that were saved before loading .env
+  // These should have higher priority than .env settings
+  if (originalEnv.targetAmount) {
+    args.targetAmount = originalEnv.targetAmount;
+    console.log(`DEBUG: Restoring original TARGET_USDT_AMOUNT from command line: ${args.targetAmount}`);
+  }
+  
+  if (originalEnv.senderAddress) {
+    args.senderAddress = originalEnv.senderAddress;
+    console.log(`DEBUG: Restoring original SENDER_ADDRESS from command line: ${args.senderAddress}`);
+  }
+  
+  if (originalEnv.recipientAddressBnb) {
+    args.recipientAddressBnb = originalEnv.recipientAddressBnb;
+    console.log(`DEBUG: Restoring original RECIPIENT_ADDRESS_BNB_MAINNET from command line: ${args.recipientAddressBnb}`);
+  }
+  
+  if (originalEnv.recipientAddressPolygon) {
+    args.recipientAddressPolygon = originalEnv.recipientAddressPolygon;
+    console.log(`DEBUG: Restoring original RECIPIENT_ADDRESS_POLYGON_MAINNET from command line: ${args.recipientAddressPolygon}`);
+  }
+  
+  // Only check environment variables as a last resort if nothing was found in command line arguments
+  // We check these AFTER the originals to ensure command line args have highest priority
+  if (!args.targetAmount && process.env.TARGET_USDT_AMOUNT) {
     args.targetAmount = process.env.TARGET_USDT_AMOUNT;
-    console.log(`DEBUG: TARGET_USDT_AMOUNT already set in environment: ${args.targetAmount}`);
+    console.log(`DEBUG: Using TARGET_USDT_AMOUNT from .env file: ${args.targetAmount}`);
   }
-  if (process.env.SENDER_ADDRESS) {
+  
+  if (!args.senderAddress && process.env.SENDER_ADDRESS) {
     args.senderAddress = process.env.SENDER_ADDRESS;
-    console.log(`DEBUG: SENDER_ADDRESS already set in environment: ${args.senderAddress}`);
+    console.log(`DEBUG: Using SENDER_ADDRESS from .env file: ${args.senderAddress}`);
   }
-  if (process.env.RECIPIENT_ADDRESS_BNB_MAINNET) {
+  
+  if (!args.recipientAddressBnb && process.env.RECIPIENT_ADDRESS_BNB_MAINNET) {
     args.recipientAddressBnb = process.env.RECIPIENT_ADDRESS_BNB_MAINNET;
-    console.log(`DEBUG: RECIPIENT_ADDRESS_BNB_MAINNET already set in environment: ${args.recipientAddressBnb}`);
+    console.log(`DEBUG: Using RECIPIENT_ADDRESS_BNB_MAINNET from .env file: ${args.recipientAddressBnb}`);
   }
-  if (process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET) {
+  
+  if (!args.recipientAddressPolygon && process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET) {
     args.recipientAddressPolygon = process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET;
-    console.log(`DEBUG: RECIPIENT_ADDRESS_POLYGON_MAINNET already set in environment: ${args.recipientAddressPolygon}`);
+    console.log(`DEBUG: Using RECIPIENT_ADDRESS_POLYGON_MAINNET from .env file: ${args.recipientAddressPolygon}`);
   }
-  if (process.env.BSCSCAN_API_KEY) {
+  
+  // Handle API keys and URLs with correct priority
+  if (!args.bscscanApiKey && process.env.BSCSCAN_API_KEY) {
     args.bscscanApiKey = process.env.BSCSCAN_API_KEY;
-    console.log(`DEBUG: BSCSCAN_API_KEY already set in environment`);
+    console.log(`DEBUG: Using BSCSCAN_API_KEY from .env file`);
   }
-  if (process.env.POLYGONSCAN_API_KEY) {
+  
+  if (!args.polygonscanApiKey && process.env.POLYGONSCAN_API_KEY) {
     args.polygonscanApiKey = process.env.POLYGONSCAN_API_KEY;
-    console.log(`DEBUG: POLYGONSCAN_API_KEY already set in environment`);
+    console.log(`DEBUG: Using POLYGONSCAN_API_KEY from .env file`);
   }
-  if (process.env.BSC_MAINNET_HTTPS_URL) {
+  
+  if (!args.bscMainnetUrl && process.env.BSC_MAINNET_HTTPS_URL) {
     args.bscMainnetUrl = process.env.BSC_MAINNET_HTTPS_URL;
-    console.log(`DEBUG: BSC_MAINNET_HTTPS_URL already set in environment`);
+    console.log(`DEBUG: Using BSC_MAINNET_HTTPS_URL from .env file`);
   }
-  if (process.env.POLYGON_MAINNET_HTTPS_URL) {
+  
+  if (!args.polygonMainnetUrl && process.env.POLYGON_MAINNET_HTTPS_URL) {
     args.polygonMainnetUrl = process.env.POLYGON_MAINNET_HTTPS_URL;
-    console.log(`DEBUG: POLYGON_MAINNET_HTTPS_URL already set in environment`);
+    console.log(`DEBUG: Using POLYGON_MAINNET_HTTPS_URL from .env file`);
   }
+  
+  // Set the environment variables with command line args having highest priority
   
   // If TARGET_USDT_AMOUNT was found, override the env var
   if (args.targetAmount) {
@@ -188,7 +233,7 @@ function parseArguments() {
     // Verify it was set
     console.log(`DEBUG: BSCSCAN_API_KEY in env after setting is present: ${!!process.env.BSCSCAN_API_KEY}`);
   } else {
-    console.log('DEBUG: No BSCSCAN_API_KEY found in command line arguments or environment');
+    console.log('DEBUG: No BSCSCAN_API_KEY found in command line arguments');
   }
   
   // If POLYGONSCAN_API_KEY was found, override the env var
@@ -199,7 +244,7 @@ function parseArguments() {
     // Verify it was set
     console.log(`DEBUG: POLYGONSCAN_API_KEY in env after setting is present: ${!!process.env.POLYGONSCAN_API_KEY}`);
   } else {
-    console.log('DEBUG: No POLYGONSCAN_API_KEY found in command line arguments or environment');
+    console.log('DEBUG: No POLYGONSCAN_API_KEY found in command line arguments');
   }
   
   // If BSC_MAINNET_HTTPS_URL was found, override the env var
@@ -210,7 +255,7 @@ function parseArguments() {
     // Verify it was set
     console.log(`DEBUG: BSC_MAINNET_HTTPS_URL in env after setting is present: ${!!process.env.BSC_MAINNET_HTTPS_URL}`);
   } else {
-    console.log('DEBUG: No BSC_MAINNET_HTTPS_URL found in command line arguments or environment');
+    console.log('DEBUG: No BSC_MAINNET_HTTPS_URL found in command line arguments');
   }
   
   // If POLYGON_MAINNET_HTTPS_URL was found, override the env var
@@ -221,7 +266,7 @@ function parseArguments() {
     // Verify it was set
     console.log(`DEBUG: POLYGON_MAINNET_HTTPS_URL in env after setting is present: ${!!process.env.POLYGON_MAINNET_HTTPS_URL}`);
   } else {
-    console.log('DEBUG: No POLYGON_MAINNET_HTTPS_URL found in command line arguments or environment');
+    console.log('DEBUG: No POLYGON_MAINNET_HTTPS_URL found in command line arguments');
   }
   
   return args;

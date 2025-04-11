@@ -8,6 +8,11 @@
  * @returns {Object} Network configurations
  */
 function getNetworkConfigs() {
+  // First log environment variables for debugging
+  console.log('DEBUG: TARGET_USDT_AMOUNT before creating configs:', process.env.TARGET_USDT_AMOUNT);
+  console.log('DEBUG: RECIPIENT_ADDRESS_BNB_MAINNET value:', process.env.RECIPIENT_ADDRESS_BNB_MAINNET);
+  console.log('DEBUG: RECIPIENT_ADDRESS_POLYGON_MAINNET value:', process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET);
+  
   return {
     // BEP20 (Binance Smart Chain) configuration
     BEP20: {

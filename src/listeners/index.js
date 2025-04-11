@@ -32,6 +32,18 @@ function createListener(networkType, db, eventEmitter) {
     throw new Error(`Unknown network type: ${networkType}`);
   }
   
+  // --- DEBUG LOG --- Print environment variables and arguments
+  console.log(`DEBUG: Environment variables for ${networkType} listener:`);
+  if (networkType === 'BEP20') {
+    console.log(`  RECIPIENT_ADDRESS_BNB_MAINNET: ${process.env.RECIPIENT_ADDRESS_BNB_MAINNET}`);
+    console.log(`  BSC_MAINNET_HTTPS_URL: ${process.env.BSC_MAINNET_HTTPS_URL ? 'set' : 'not set'}`);
+  } else if (networkType === 'POLYGON') {
+    console.log(`  RECIPIENT_ADDRESS_POLYGON_MAINNET: ${process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET}`);
+    console.log(`  POLYGON_MAINNET_HTTPS_URL: ${process.env.POLYGON_MAINNET_HTTPS_URL ? 'set' : 'not set'}`);
+  }
+  console.log(`  TARGET_USDT_AMOUNT: ${process.env.TARGET_USDT_AMOUNT}`);
+  console.log(`  SENDER_ADDRESS: ${process.env.SENDER_ADDRESS}`);
+  
   // --- DEBUG LOG --- Print the config being used
   console.log(`DEBUG: createListener using config for ${networkType}:`, JSON.stringify(config, null, 2)); 
   // --- END DEBUG LOG ---
