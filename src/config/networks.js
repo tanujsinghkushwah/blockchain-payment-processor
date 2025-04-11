@@ -18,6 +18,7 @@ function getNetworkConfigs() {
       tokenDecimals: 18,
       tokenContractAddress: '0x55d398326f99059fF775485246999027B3197955', // USDT on BSC
       recipientAddress: process.env.RECIPIENT_ADDRESS_BNB_MAINNET, // Use specific BNB mainnet recipient address
+      senderAddress: process.env.SENDER_ADDRESS || null, // Use sender address if provided
       targetAmount: process.env.TARGET_USDT_AMOUNT || null, // Use unified target amount
       // Minimal ABI for Transfer event: event Transfer(address indexed from, address indexed to, uint256 value)
       abi: [ // Added ABI
@@ -41,6 +42,7 @@ function getNetworkConfigs() {
       tokenDecimals: 18, // Assuming standard 18 decimals for testnet USDT, adjust if needed
       tokenContractAddress: process.env.USDT_CONTRACT_ADDRESS_TESTNET, 
       recipientAddress: process.env.RECIPIENT_ADDRESS, 
+      senderAddress: process.env.SENDER_ADDRESS || null, // Use sender address if provided
       targetAmount: process.env.TARGET_USDT_AMOUNT || null, // Use unified target amount
       // Minimal ABI for Transfer event: event Transfer(address indexed from, address indexed to, uint256 value)
       abi: [
@@ -63,6 +65,7 @@ function getNetworkConfigs() {
       tokenDecimals: 6,
       tokenContractAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', // USDT on Polygon
       recipientAddress: process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET, // Use specific Polygon mainnet recipient address
+      senderAddress: process.env.SENDER_ADDRESS || null, // Use sender address if provided
       targetAmount: process.env.TARGET_USDT_AMOUNT || null, // Use unified target amount
       // Minimal ABI for Transfer event: event Transfer(address indexed from, address indexed to, uint256 value)
       abi: [ // Added ABI
@@ -85,6 +88,7 @@ function getNetworkConfigs() {
       tokenDecimals: 18,
       tokenContractAddress: '0x1A82819A96134E3035cA561163aB10b073155477', // Common Amoy USDT address, verify if needed
       recipientAddress: process.env.RECIPIENT_ADDRESS,
+      senderAddress: process.env.SENDER_ADDRESS || null, // Use sender address if provided
       targetAmount: process.env.TARGET_USDT_AMOUNT || null, // Use unified target amount
       // Minimal ABI for Transfer event: event Transfer(address indexed from, address indexed to, uint256 value)
       abi: [

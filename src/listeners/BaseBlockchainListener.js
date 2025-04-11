@@ -156,6 +156,17 @@ class BaseBlockchainListener {
         return; // Ignore transactions to addresses we don't track
       }
 
+      // --- Sender Address Verification Logic ---
+      if (this.config.senderAddress) {
+        // Case-insensitive comparison of addresses
+        if (transaction.from.toLowerCase() !== this.config.senderAddress.toLowerCase()) {
+          console.log(`[${this.config.name}] Ignoring transaction ${transaction.hash} - sender address ${transaction.from} does not match configured sender ${this.config.senderAddress}.`);
+          return; // Ignore transactions from addresses we don't want to track
+        }
+        console.log(`[${this.config.name}] Transaction ${transaction.hash} sender address ${transaction.from} matches configured sender.`);
+      }
+      // --- End Sender Address Verification Logic ---
+
       // --- Amount Verification Logic --- 
       if (this.config.targetAmount) {
         try {

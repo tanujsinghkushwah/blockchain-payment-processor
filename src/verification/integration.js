@@ -23,6 +23,7 @@ function parseArguments() {
   
   // Check if TARGET_USDT_AMOUNT exists in env before parsing
   console.log(`DEBUG: TARGET_USDT_AMOUNT in env before parsing: ${process.env.TARGET_USDT_AMOUNT}`);
+  console.log(`DEBUG: SENDER_ADDRESS in env before parsing: ${process.env.SENDER_ADDRESS}`);
   
   // Extract all arguments potentially containing TARGET_USDT_AMOUNT or recipient addresses
   // This includes directly from argv as well as from npm_config_* env variables
@@ -33,6 +34,10 @@ function parseArguments() {
     if (arg.startsWith('--TARGET_USDT_AMOUNT=')) {
       args.targetAmount = arg.split('=')[1];
       console.log(`DEBUG: Found TARGET_USDT_AMOUNT in direct arguments: ${args.targetAmount}`);
+    }
+    if (arg.startsWith('--SENDER_ADDRESS=')) {
+      args.senderAddress = arg.split('=')[1];
+      console.log(`DEBUG: Found SENDER_ADDRESS in direct arguments: ${args.senderAddress}`);
     }
     if (arg.startsWith('--RECIPIENT_ADDRESS_BNB_MAINNET=')) {
       args.recipientAddressBnb = arg.split('=')[1];
@@ -67,6 +72,10 @@ function parseArguments() {
       args.targetAmount = process.env[key];
       console.log(`DEBUG: Found TARGET_USDT_AMOUNT in npm config env: ${args.targetAmount}`);
     }
+    if (key.toLowerCase() === 'npm_config_sender_address') {
+      args.senderAddress = process.env[key];
+      console.log(`DEBUG: Found SENDER_ADDRESS in npm config env: ${args.senderAddress}`);
+    }
     if (key.toLowerCase() === 'npm_config_recipient_address_bnb_mainnet') {
       args.recipientAddressBnb = process.env[key];
       console.log(`DEBUG: Found RECIPIENT_ADDRESS_BNB_MAINNET in npm config env: ${args.recipientAddressBnb}`);
@@ -97,6 +106,10 @@ function parseArguments() {
   if (process.env.TARGET_USDT_AMOUNT) {
     args.targetAmount = process.env.TARGET_USDT_AMOUNT;
     console.log(`DEBUG: TARGET_USDT_AMOUNT already set in environment: ${args.targetAmount}`);
+  }
+  if (process.env.SENDER_ADDRESS) {
+    args.senderAddress = process.env.SENDER_ADDRESS;
+    console.log(`DEBUG: SENDER_ADDRESS already set in environment: ${args.senderAddress}`);
   }
   if (process.env.RECIPIENT_ADDRESS_BNB_MAINNET) {
     args.recipientAddressBnb = process.env.RECIPIENT_ADDRESS_BNB_MAINNET;
@@ -132,6 +145,17 @@ function parseArguments() {
     console.log(`DEBUG: TARGET_USDT_AMOUNT in env after setting: ${process.env.TARGET_USDT_AMOUNT}`);
   } else {
     console.log('DEBUG: No TARGET_USDT_AMOUNT found in command line arguments or environment');
+  }
+  
+  // If SENDER_ADDRESS was found, override the env var
+  if (args.senderAddress) {
+    process.env.SENDER_ADDRESS = args.senderAddress;
+    console.log(`Setting SENDER_ADDRESS to ${args.senderAddress}`);
+    
+    // Verify it was set
+    console.log(`DEBUG: SENDER_ADDRESS in env after setting: ${process.env.SENDER_ADDRESS}`);
+  } else {
+    console.log('DEBUG: No SENDER_ADDRESS found in command line arguments or environment');
   }
   
   // If RECIPIENT_ADDRESS_BNB_MAINNET was found, override the env var
