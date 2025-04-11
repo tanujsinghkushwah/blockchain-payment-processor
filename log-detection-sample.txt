@@ -1,0 +1,31 @@
+[POLYGON] Checking blocks 70168298 to 70168306 for recipient 0x81466D108b0969DC26baE8AC040d15F706E9a231
+[POLYGON] Matched incoming address 0x81466D108b0969DC26baE8AC040d15F706E9a231 to configured recipient address.
+[POLYGON] Verifying amount for tx 0x0bb87ee7181b9fa9854c1026f929a8005c1e9c829e0f02a8b39bd607bdd4102b: Received 1000000, Target 1000000, Lower Bound (-5%) 950000      
+[POLYGON] Transaction 0x0bb87ee7181b9fa9854c1026f929a8005c1e9c829e0f02a8b39bd607bdd4102b amount 1000000 meets criteria (>= 950000).
+[POLYGON] Created transaction record: {
+  sessionId: 'mock_session_for_0x81466D108b0969DC26baE8AC040d15F706E9a231',        
+  txHash: '0x0bb87ee7181b9fa9854c1026f929a8005c1e9c829e0f02a8b39bd607bdd4102b',    
+  fromAddress: '0x4D4017f6cd651721d8647e3195b359f2dd1a133b',
+  toAddress: '0x81466D108b0969DC26baE8AC040d15F706E9a231',
+  amount: '1',
+  currency: 'USDT-Polygon',
+  network: 'POLYGON',
+  confirmations: 6,
+  status: 'PENDING',
+  detectedAt: 2025-04-11T11:55:46.722Z,
+  confirmedAt: null,
+  blockNumber: 70168302
+}
+Transaction detected: {
+  transactionId: 'tx_1744372546725',
+  sessionId: 'mock_session_for_0x81466D108b0969DC26baE8AC040d15F706E9a231'
+}
+Transaction detected: {
+  transactionId: 'tx_1744372546725',
+  sessionId: 'mock_session_for_0x81466D108b0969DC26baE8AC040d15F706E9a231'
+}
+[POLYGON] Processed transaction 0x0bb87ee7181b9fa9854c1026f929a8005c1e9c829e0f02a8b39bd607bdd4102b for address 0x81466D108b0969DC26baE8AC040d15F706E9a231
+[POLYGON] Updated last checked block to 70168306
+Session mock_session_for_0x81466D108b0969DC26baE8AC040d15F706E9a231 not found      
+Verifying pending payments
+Found 0 pending payment sessions

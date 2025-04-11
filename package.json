@@ -15,7 +15,7 @@
     "BEP20",
     "Polygon"
   ],
-  "author": "Your Name",
+  "author": "Tanuj Singh Kushwah",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.27.2",
