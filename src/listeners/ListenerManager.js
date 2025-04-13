@@ -57,13 +57,13 @@ class ListenerManager {
         // }
 
         // Log the current value of process.env.TARGET_USDT_AMOUNT before creating listener
-        console.log(`DEBUG: TARGET_USDT_AMOUNT before creating ${networkType} listener: ${process.env.TARGET_USDT_AMOUNT}`);
+        // console.log(`DEBUG: TARGET_USDT_AMOUNT before creating ${networkType} listener: ${process.env.TARGET_USDT_AMOUNT}`); // Removed for security
         
         const listener = createListener(networkType, this.db, this.eventEmitter);
         await listener.initialize();
         
         // Log the listener's config to verify targetAmount is set correctly
-        console.log(`DEBUG: ${networkType} listener config.targetAmount: ${listener.config.targetAmount}`);
+        // console.log(`DEBUG: ${networkType} listener config.targetAmount: ${listener.config.targetAmount}`); // Removed for security
 
         this.listeners[networkType] = listener;
         console.log(`Listener for ${networkType} initialized`);

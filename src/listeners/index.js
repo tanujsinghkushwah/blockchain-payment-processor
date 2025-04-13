@@ -33,19 +33,19 @@ function createListener(networkType, db, eventEmitter) {
   }
   
   // --- DEBUG LOG --- Print environment variables and arguments
-  console.log(`DEBUG: Environment variables for ${networkType} listener:`);
+  // console.log(`DEBUG: Environment variables for ${networkType} listener:`); // Removed for security
   if (networkType === 'BEP20') {
-    console.log(`  RECIPIENT_ADDRESS_BNB_MAINNET: ${process.env.RECIPIENT_ADDRESS_BNB_MAINNET}`);
-    console.log(`  BSC_MAINNET_HTTPS_URL: ${process.env.BSC_MAINNET_HTTPS_URL ? 'set' : 'not set'}`);
+    // console.log(`  RECIPIENT_ADDRESS_BNB_MAINNET: ${process.env.RECIPIENT_ADDRESS_BNB_MAINNET}`); // Removed for security
+    // console.log(`  BSC_MAINNET_HTTPS_URL: ${process.env.BSC_MAINNET_HTTPS_URL ? 'set' : 'not set'}`); // Removed for security
   } else if (networkType === 'POLYGON') {
-    console.log(`  RECIPIENT_ADDRESS_POLYGON_MAINNET: ${process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET}`);
-    console.log(`  POLYGON_MAINNET_HTTPS_URL: ${process.env.POLYGON_MAINNET_HTTPS_URL ? 'set' : 'not set'}`);
+    // console.log(`  RECIPIENT_ADDRESS_POLYGON_MAINNET: ${process.env.RECIPIENT_ADDRESS_POLYGON_MAINNET}`); // Removed for security
+    // console.log(`  POLYGON_MAINNET_HTTPS_URL: ${process.env.POLYGON_MAINNET_HTTPS_URL ? 'set' : 'not set'}`); // Removed for security
   }
-  console.log(`  TARGET_USDT_AMOUNT: ${process.env.TARGET_USDT_AMOUNT}`);
-  console.log(`  SENDER_ADDRESS: ${process.env.SENDER_ADDRESS}`);
+  // console.log(`  TARGET_USDT_AMOUNT: ${process.env.TARGET_USDT_AMOUNT}`); // Removed for security
+  // console.log(`  SENDER_ADDRESS: ${process.env.SENDER_ADDRESS}`); // Removed for security
   
   // --- DEBUG LOG --- Print the config being used
-  console.log(`DEBUG: createListener using config for ${networkType}:`, JSON.stringify(config, null, 2)); 
+  // console.log(`DEBUG: createListener using config for ${networkType}:`, JSON.stringify(config, null, 2)); // Removed for security 
   // --- END DEBUG LOG ---
   
   switch (networkType) {

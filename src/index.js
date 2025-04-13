@@ -42,11 +42,11 @@ async function startBlockchainPaymentSystem(networksToStart = []) {
     const { app, server, paymentProcessor, listenerManager, transactionStorage } = await initializeApiServer(networksToStart, networks);
     
     // --- DEBUG LOG --- Check server object
-    console.log('DEBUG: Received server object:', server);
+    // console.log('DEBUG: Received server object:', server); // Removed for security
     if (server && server.address) {
-      console.log('DEBUG: Server address():', server.address());
+      // console.log('DEBUG: Server address():', server.address()); // Removed for security
     } else {
-      console.log('DEBUG: Server object or server.address is null/undefined!');
+      // console.log('DEBUG: Server object or server.address is null/undefined!'); // Removed for security
     }
     // --- END DEBUG LOG ---
     
